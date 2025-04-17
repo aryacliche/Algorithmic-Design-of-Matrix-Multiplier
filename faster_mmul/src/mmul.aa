@@ -1,0 +1,84 @@
+$parameter ORDER 16
+
+$storage A B C: $array[ORDER][ORDER] $of $uint<32>
+
+$module [storeA] $in (I J: $uint<8> wval: $uint<32>) $out () $is
+{
+	A[I][J] := wval
+}
+$module [storeB] $in (I J: $uint<8> wval: $uint<32>) $out () $is
+{
+	B[I][J] := wval
+}
+
+$module [loadC] $in (I J : $uint<8>) $out (Y : $uint<32>) $is
+{
+	Y := C[I][J]
+}
+
+$module [dot_product_unrolled] $in (I J: $uint<8>) $out (result: $uint<32>) $is
+{
+	$branchblock[loop] {
+
+		$dopipeline $depth 31 $fullrate
+			$merge $entry $loopback
+				$phi K := $zero<8> $on $entry nK $on $loopback
+				$phi SUM0 := ($bitcast ($uint<32>) 0)  $on $entry nSUM0 $on $loopback
+				$phi SUM1 := ($bitcast ($uint<32>) 0)  $on $entry nSUM1 $on $loopback
+			$endmerge
+			$volatile nK := (K + 2)
+			$volatile continue_flag := (K < (ORDER-2))
+
+			nSUM0 := (SUM0 + (A[I][K] * B[K][J]))
+			nSUM1 := (SUM1 + (A[I][(K+1)] * B[(K+1)][J]))
+		$while continue_flag
+		$volatile fSUM := (nSUM0 + nSUM1)
+	} (fSUM => result_exported)
+	$volatile result := result_exported
+}
+
+$module [dot_product] $in (I J: $uint<8>) $out (result: $uint<32>) $is
+{
+	$branchblock[loop] {
+
+		$dopipeline $depth 31 $fullrate
+			$merge $entry $loopback
+				$phi K := $zero<8> $on $entry nK $on $loopback
+				$phi SUM := ($bitcast ($uint<32>) 0)  $on $entry nSUM $on $loopback
+			$endmerge
+			$volatile nK := (K + 1)
+			$volatile continue_flag := (K < (ORDER-1))
+
+			nSUM := (SUM + (A[I][K] * B[K][J]))
+		$while continue_flag
+	} (nSUM => result_exported)
+	$volatile result := result_exported
+}
+
+$module [mmul] $in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$dopipeline $depth 3 
+			$merge $entry $loopback 
+				$phi J := $zero<8> $on $entry nJ $on $loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			$volatile continue_flag := (J < (ORDER - 1))
+	
+			// dot-product.. naive implementation.
+			C[I][J] := ($call dot_product (I J))
+		
+			// Use the unrolled version to speed things up.
+			//C[I][J] := ($call dot_product_unrolled (I J))
+			
+		$while continue_flag
+
+	    $if (I < (ORDER-1)) $then $place [I_loopback] $endif
+	}
+}
+
