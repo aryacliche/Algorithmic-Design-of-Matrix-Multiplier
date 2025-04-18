@@ -60,6 +60,90 @@ $module [dot_product_most_expensive] $in (I J: $uint<8>) $out (result: $uint<32>
 		)
 }
 
+$module [dot_product_forked] $in (I J: $uint<8>) $out (result: $uint<32>) $is
+{
+	// This is tailored for ORDER = 16. There is a lot of parallelism thus.
+	$forkblock [f1]
+	{
+		$parallelblock [p1]
+		{
+			prod1 := (A[I][1] * B[1][J])
+			prod2 := (A[I][2] * B[2][J])
+		} (	prod1
+			prod2)
+		$parallelblock [p2]
+		{
+			prod3 := (A[I][3] * B[3][J])
+			prod4 := (A[I][4] * B[4][J])
+		} (	prod3
+			prod4)
+		$parallelblock [p3]
+		{
+			prod5 := (A[I][5] * B[5][J])
+			prod6 := (A[I][6] * B[6][J])
+		} (	prod5
+			prod6)
+		$parallelblock [p4]
+		{
+			prod7 := (A[I][7] * B[7][J])
+			prod8 := (A[I][8] * B[8][J])
+		} (	prod7
+			prod8)
+		$parallelblock [p5]
+		{
+			prod9 := (A[I][9] * B[9][J])
+			prod10 := (A[I][10] * B[10][J])
+		} (	prod9
+			prod10)
+		$parallelblock [p6]
+		{
+			prod11 := (A[I][11] * B[11][J])
+			prod12 := (A[I][12] * B[12][J])
+		} (	prod11
+			prod12)
+		$parallelblock [p7]
+		{		
+			prod13 := (A[I][13] * B[13][J])
+			prod14 := (A[I][14] * B[14][J])
+		} ( prod13
+			prod14)
+		$parallelblock [p8]
+		{		
+			prod15 := (A[I][15] * B[15][J])
+			prod0 := (A[I][0] * B[0][J])
+		} (	prod15
+			prod0)
+		
+		$join p1 p2 $fork $parallelblock [s1] { 
+			sum1 := (prod1 + prod2) 
+			sum2 := (prod3 + prod4)
+		} (	sum1 => sum1
+			sum2 => sum2)
+		
+		$join p3 p4 $fork $parallelblock [s2] { 
+			sum3 := (prod5 + prod6)
+			sum4 := (prod7 + prod8)
+		} (	sum3 => sum3
+			sum4 => sum4)
+
+		$join p5 p6 $fork $parallelblock [s3] { 
+			sum5 := (prod9 + prod10)
+			sum6 := (prod11 + prod12)
+		} (	sum5 => sum5
+			sum6 => sum6)
+
+		$join p7 p8 $fork $parallelblock [s4] { 
+			sum7 := (prod13 + prod14)
+			sum8 := (prod15 + prod0)
+		} (	sum7 => sum7
+			sum8 => sum8)
+
+		$join s1 s2 $fork $seriesblock [su1] { ssum1 := (sum1 + sum2) } (ssum1 => ssum1)
+		$join s3 s4 $fork $seriesblock [su2] { ssum2 := (sum3 + sum4) } (ssum2 => ssum2)
+	} (ssum1 => ssum1 ssum2 => ssum2)
+	$volatile result := ( ssum1 + ssum2 )
+}
+
 
 $module [dot_product_unrolled] $in (I J: $uint<8>) $out (result: $uint<32>) $is
 {
