@@ -53,41 +53,10 @@ $module [dot_product_most_expensive] $in (I J: $uint<8>) $out (result: $uint<32>
 		prod13 => prod13
 		prod14 => prod14
 		prod15 => prod15)
-	$parallelblock [p2]
-	{
-		$volatile sum0 := (prod1 + prod2)
-		$volatile sum1 := (prod3 + prod4)
-		$volatile sum2 := (prod5 + prod6)
-		$volatile sum3 := (prod7 + prod8)
-		$volatile sum4 := (prod9 + prod10)
-		$volatile sum5 := (prod11 + prod12)
-		$volatile sum6 := (prod13 + prod14)
-		$volatile sum7 := (prod15 + prod0)
-	}(	sum0 => sum0
-		sum1 => sum1
-		sum2 => sum2
-		sum3 => sum3
-		sum4 => sum4
-		sum5 => sum5
-		sum6 => sum6
-		sum7 => sum7)
-	$parallelblock [p3]
-	{
-		$volatile nsum0 := (sum0 + sum1)
-		$volatile nsum1 := (sum2 + sum3)
-		$volatile nsum2 := (sum4 + sum5)
-		$volatile nsum3 := (sum6 + sum7)
-	}(	nsum0 => nsum0
-		nsum1 => nsum1
-		nsum2 => nsum2
-		nsum3 => nsum3)
-	$parallelblock [p4]
-	{
-		$volatile nnsum0 := (nsum0 + nsum1)
-		$volatile nnsum1 := (nsum2 + nsum3)
-	}(	nnsum0 => nnsum0
-		nnsum1 => nnsum1)
-	$volatile result := (nnsum0 + nnsum1)
+	$volatile result := (
+		( ((prod1 + prod2) + (prod3 + prod4)) + ((prod5 + prod6) + (prod7 + prod8)) ) +
+		( ((prod9 + prod10) + (prod11 + prod12)) + ((prod13 + prod14) + (prod15 + prod0)) )
+		)
 }
 
 
