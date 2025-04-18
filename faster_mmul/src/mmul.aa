@@ -16,6 +16,81 @@ $module [loadC] $in (I J : $uint<8>) $out (Y : $uint<32>) $is
 	Y := C[I][J]
 }
 
+$module [dot_product_most_expensive] $in (I J: $uint<8>) $out (result: $uint<32>) $is
+{
+	// This is tailored for ORDER = 16. There is a lot of parallelism thus.
+	$parallelblock [p1]
+	{
+		$volatile prod0 := (A[I][0] * B[0][J])
+		$volatile prod1 := (A[I][1] * B[1][J])
+		$volatile prod2 := (A[I][2] * B[2][J])
+		$volatile prod3 := (A[I][3] * B[3][J])
+		$volatile prod4 := (A[I][4] * B[4][J])
+		$volatile prod5 := (A[I][5] * B[5][J])
+		$volatile prod6 := (A[I][6] * B[6][J])
+		$volatile prod7 := (A[I][7] * B[7][J])
+		$volatile prod8 := (A[I][8] * B[8][J])
+		$volatile prod9 := (A[I][9] * B[9][J])
+		$volatile prod10 := (A[I][10] * B[10][J])
+		$volatile prod11 := (A[I][11] * B[11][J])
+		$volatile prod12 := (A[I][12] * B[12][J])
+		$volatile prod13 := (A[I][13] * B[13][J])
+		$volatile prod14 := (A[I][14] * B[14][J])
+		$volatile prod15 := (A[I][15] * B[15][J])
+	}(  prod0 => prod0
+		prod1 => prod1
+		prod2 => prod2
+		prod3 => prod3
+		prod4 => prod4
+		prod5 => prod5
+		prod6 => prod6
+		prod7 => prod7
+		prod8 => prod8
+		prod9 => prod9
+		prod10 => prod10
+		prod11 => prod11
+		prod12 => prod12
+		prod13 => prod13
+		prod14 => prod14
+		prod15 => prod15)
+	$parallelblock [p2]
+	{
+		$volatile sum0 := (prod1 + prod2)
+		$volatile sum1 := (prod3 + prod4)
+		$volatile sum2 := (prod5 + prod6)
+		$volatile sum3 := (prod7 + prod8)
+		$volatile sum4 := (prod9 + prod10)
+		$volatile sum5 := (prod11 + prod12)
+		$volatile sum6 := (prod13 + prod14)
+		$volatile sum7 := (prod15 + prod0)
+	}(	sum0 => sum0
+		sum1 => sum1
+		sum2 => sum2
+		sum3 => sum3
+		sum4 => sum4
+		sum5 => sum5
+		sum6 => sum6
+		sum7 => sum7)
+	$parallelblock [p3]
+	{
+		$volatile nsum0 := (sum0 + sum1)
+		$volatile nsum1 := (sum2 + sum3)
+		$volatile nsum2 := (sum4 + sum5)
+		$volatile nsum3 := (sum6 + sum7)
+	}(	nsum0 => nsum0
+		nsum1 => nsum1
+		nsum2 => nsum2
+		nsum3 => nsum3)
+	$parallelblock [p4]
+	{
+		$volatile nnsum0 := (nsum0 + nsum1)
+		$volatile nnsum1 := (nsum2 + nsum3)
+	}(	nnsum0 => nnsum0
+		nnsum1 => nnsum1)
+	$volatile result := (nnsum0 + nnsum1)
+}
+
+
 $module [dot_product_unrolled] $in (I J: $uint<8>) $out (result: $uint<32>) $is
 {
 	$branchblock[loop] {
@@ -71,10 +146,13 @@ $module [mmul] $in () $out () $is
 			$volatile continue_flag := (J < (ORDER - 1))
 	
 			// dot-product.. naive implementation.
-			C[I][J] := ($call dot_product (I J))
+			//C[I][J] := ($call dot_product (I J))
 		
 			// Use the unrolled version to speed things up.
-			//C[I][J] := ($call dot_product_unrolled (I J))
+			C[I][J] := ($call dot_product_unrolled (I J))
+
+			// Use the expensive version to speed things up even more.
+			//C[I][J] := ($call dot_product_most_expensive (I J))
 			
 		$while continue_flag
 
