@@ -6,7 +6,7 @@ VHDL_VHPI_LIB=$(AHIR_RELEASE)/CtestBench/vhdl
 FUNCTIONLIB=$(AHIR_RELEASE)/functionLibrary/
 SRC=./src
 all: HW 
-TOPMODULES=-t storeA -t storeB  -t loadC  -t mmul
+TOPMODULES=-t storeA -t storeB  -t loadC  -t mmul -t latencyTest
 
 # five steps from C to vhdl simulator.
 HW: aalink aa2vc  vc2vhdl  vhdltb ghdlsim

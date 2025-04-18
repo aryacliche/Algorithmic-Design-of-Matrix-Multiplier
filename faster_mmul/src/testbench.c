@@ -35,11 +35,20 @@ int main(int argc, char* argv[])
 
 	clock_t begin = clock();
 
-	mmul();
+	latencyTest();
 
 	clock_t end = clock();
 	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-	fprintf(stderr,"Time spent: %f seconds\n", time_spent);
+	fprintf(stderr,"Time spent in latencyTest: %f seconds\n", time_spent);
+
+	begin = clock();
+
+	mmul();
+
+	end = clock();
+	double new_time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	fprintf(stderr,"Time spent: %f seconds\n", new_time_spent);
+	fprintf(stderr,"Time spent on mmul purely: %f seconds\n", new_time_spent - time_spent);
 
 	fprintf(stderr,"Finished dot_product, verifying correctness...\n");
 	for(I = 0; I < ORDER; I++)

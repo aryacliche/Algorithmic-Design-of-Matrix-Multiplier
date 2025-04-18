@@ -21,22 +21,22 @@ $module [dot_product_most_expensive] $in (I J: $uint<8>) $out (result: $uint<32>
 	// This is tailored for ORDER = 16. There is a lot of parallelism thus.
 	$parallelblock [p1]
 	{
-		$volatile prod0 := (A[I][0] * B[0][J])
-		$volatile prod1 := (A[I][1] * B[1][J])
-		$volatile prod2 := (A[I][2] * B[2][J])
-		$volatile prod3 := (A[I][3] * B[3][J])
-		$volatile prod4 := (A[I][4] * B[4][J])
-		$volatile prod5 := (A[I][5] * B[5][J])
-		$volatile prod6 := (A[I][6] * B[6][J])
-		$volatile prod7 := (A[I][7] * B[7][J])
-		$volatile prod8 := (A[I][8] * B[8][J])
-		$volatile prod9 := (A[I][9] * B[9][J])
-		$volatile prod10 := (A[I][10] * B[10][J])
-		$volatile prod11 := (A[I][11] * B[11][J])
-		$volatile prod12 := (A[I][12] * B[12][J])
-		$volatile prod13 := (A[I][13] * B[13][J])
-		$volatile prod14 := (A[I][14] * B[14][J])
-		$volatile prod15 := (A[I][15] * B[15][J])
+		prod0 := (A[I][0] * B[0][J])
+		prod1 := (A[I][1] * B[1][J])
+		prod2 := (A[I][2] * B[2][J])
+		prod3 := (A[I][3] * B[3][J])
+		prod4 := (A[I][4] * B[4][J])
+		prod5 := (A[I][5] * B[5][J])
+		prod6 := (A[I][6] * B[6][J])
+		prod7 := (A[I][7] * B[7][J])
+		prod8 := (A[I][8] * B[8][J])
+		prod9 := (A[I][9] * B[9][J])
+		prod10 := (A[I][10] * B[10][J])
+		prod11 := (A[I][11] * B[11][J])
+		prod12 := (A[I][12] * B[12][J])
+		prod13 := (A[I][13] * B[13][J])
+		prod14 := (A[I][14] * B[14][J])
+		prod15 := (A[I][15] * B[15][J])
 	}(  prod0 => prod0
 		prod1 => prod1
 		prod2 => prod2
@@ -54,7 +54,8 @@ $module [dot_product_most_expensive] $in (I J: $uint<8>) $out (result: $uint<32>
 		prod14 => prod14
 		prod15 => prod15)
 	$volatile result := (
-		( ((prod1 + prod2) + (prod3 + prod4)) + ((prod5 + prod6) + (prod7 + prod8)) ) +
+		( ((prod1 + prod2) + (prod3 + prod4)) + ((prod5 + prod6) + (prod7 + prod8)) ) 
+		+
 		( ((prod9 + prod10) + (prod11 + prod12)) + ((prod13 + prod14) + (prod15 + prod0)) )
 		)
 }
@@ -118,10 +119,10 @@ $module [mmul] $in () $out () $is
 			//C[I][J] := ($call dot_product (I J))
 		
 			// Use the unrolled version to speed things up.
-			C[I][J] := ($call dot_product_unrolled (I J))
+			//C[I][J] := ($call dot_product_unrolled (I J))
 
 			// Use the expensive version to speed things up even more.
-			//C[I][J] := ($call dot_product_most_expensive (I J))
+			C[I][J] := ($call dot_product_most_expensive (I J))
 			
 		$while continue_flag
 
@@ -129,3 +130,8 @@ $module [mmul] $in () $out () $is
 	}
 }
 
+$module [latencyTest] $in () $out () $is
+{
+	// This module is just here so that we can look at how much time it takes for a call to HW from C takes.
+	$null
+}
