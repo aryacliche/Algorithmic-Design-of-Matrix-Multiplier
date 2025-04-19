@@ -5,16 +5,14 @@ VHDL_LIB=$(AHIR_RELEASE)/vhdl
 VHDL_VHPI_LIB=$(AHIR_RELEASE)/CtestBench/vhdl
 FUNCTIONLIB=$(AHIR_RELEASE)/functionLibrary/
 SRC=./src
-all: HW 
-TOPMODULES=-t storeA -t storeB  -t loadC  -t mmul -t latencyTest
+TOPMODULES=-t storeA -t storeB  -t loadC  -t mmul
 
 # five steps from C to vhdl simulator.
-HW: aalink aa2vc  vc2vhdl  vhdltb ghdlsim
-
+HW: aalink aa2vc vc2vhdl vhdltb ghdlsim
 
 # Aa to vC
-aalink: $(SRC)/mmul.aa 
-	AaLinkExtMem $(SRC)/mmul.aa | vcFormat > prog.linked.aa
+aalink: $(SRC)/${main_file_name}
+	AaLinkExtMem $(SRC)/${main_file_name} | vcFormat > prog.linked.aa
 	AaOpt -B prog.linked.aa | vcFormat > prog.linked.opt.aa
 
 aa2vc: prog.linked.opt.aa
@@ -48,4 +46,17 @@ ghdlsim: ahir_system.vhdl ahir_system_test_bench.vhdl $(SRC)/testbench.c vhdlCSt
 clean:
 	rm -rf *.o* *.cf *.*vhdl vhdlCStubs.* *.vcd in_data* out_data* testbench_sw testbench_hw ahir_system_test_bench vhpi.log *.aa *.vc *.lso xst *.ngc *_xmsgs *.xrpt pipeHandler.log *.srp *.ghw *.dot
 
-PHONY: all clean	
+PHONY: all clean
+
+# Targets with different main_file_name values
+original: main_file_name=mmul.aa
+original: HW
+
+parta: main_file_name=parta.aa
+parta: HW
+
+partb: main_file_name=partb.aa
+partb: HW
+
+partc: main_file_name=partc.aa
+partc: HW
