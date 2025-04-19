@@ -31,8 +31,8 @@ int main(int argc, char* argv[])
 		}
 	}
 	fprintf(stderr,"Stored A, B\n");
-	fprintf(stderr,"Multiplying now\n");
-
+	
+	fprintf(stderr,"Running latencyTest\n");
 	clock_t begin = clock();
 
 	latencyTest();
@@ -41,6 +41,7 @@ int main(int argc, char* argv[])
 	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 	fprintf(stderr,"Time spent in latencyTest: %f seconds\n", time_spent);
 
+	fprintf(stderr,"Multiplying now\n");
 	begin = clock();
 
 	mmul();

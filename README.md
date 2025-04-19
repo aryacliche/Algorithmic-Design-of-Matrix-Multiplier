@@ -19,6 +19,8 @@ After that run `tmux new` and run the following in two different panes
 - It will print the time taken for matrix multiplication (both including and excluding the time taken by the function call).
 # Documentation
 ## Miscellaneous
+### System Specs
+Any and all timing values mentioned depend on the specifications of the system in use
 ### How to measure timing
 Since there might be some time spent in the function call itself, I created a module called `latencyTest` which is as follows,
 ```aa
@@ -125,5 +127,7 @@ parallel{
 | Type                                            | Time taken (in ms) |
 | ----------------------------------------------- | ------------------ |
 | Native matrix multiplication                    | 1000               |
-| Partially unrolled matrix multiplication        |                    |
+| Partially unrolled matrix multiplication[^1]    |                    |
 | *Part A* : Fully unrolled matrix multiplication | 260                |
+
+[^1]: This version cannot be built directly. You need to comment and uncomment relevant sections of `mmul.aa` and then build using `make original`. 
