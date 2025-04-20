@@ -21,6 +21,25 @@ After that run `tmux new` and run the following in two different panes
 ## Miscellaneous
 ### System Specs
 Any and all timing values mentioned depend on the specifications of the system in use
+```
+Architecture:             x86_64
+  CPU op-mode(s):         32-bit, 64-bit
+  Address sizes:          39 bits physical, 48 bits virtual
+  Byte Order:             Little Endian
+CPU(s):                   8
+  On-line CPU(s) list:    0-7
+Vendor ID:                GenuineIntel
+  Model name:             11th Gen Intel(R) Core(TM) i5-11300H @ 3.10GHz
+    CPU family:           6
+    Model:                140
+    Thread(s) per core:   2
+    Core(s) per socket:   4
+    Socket(s):            1
+    Stepping:             1
+    CPU(s) scaling MHz:   18%
+    CPU max MHz:          4400.0000
+    CPU min MHz:          400.0000
+```
 ### How to measure timing
 Since there might be some time spent in the function call itself, I created a module called `latencyTest` which is as follows,
 ```aa
@@ -86,6 +105,10 @@ $module [dot_product_fully_unrolled] $in (I J: $uint<8>) $out (result: $uint<32>
 ```
 
 **Matrix multiplication with a fully unrolled multiplication took $\approx260 \t{ ms}$.**
+
+### Pipelining : To be or not to be?
+The `mmul` module is pipelined in the original case. The above module for dot-product computation isn't pipelineable. Thus is it better to keep the dot product pipelineable itself?
+- By using an unrolled version of the dot product module with a parallelism of just 8, we get a runtime of $560 \t{ ms}$. This is double of what we get when we use 16x parallelism. Thus, it is better to just stick to the above module.
 ## Part B : Dividing matrix into sub-matrices
 ### How does it bring speedup?
 $$\bf{A}\bf{B} = \begin{bmatrix}\bf{A}_{00} & \bf{A}_{01}\\\bf{A}_{10}& \bf{A}_{11}\end{bmatrix} \begin{bmatrix}\bf{B}_{00} & \bf{B}_{01}\\\bf{B}_{10}& \bf{B}_{11}\end{bmatrix} = \begin{bmatrix}\mathbf{A}_{00}\mathbf{B}_{00} + \bf{A}_{01}\bf{B}_{10} & \mathbf{A}_{00}\mathbf{B}_{01} + \bf{A}_{01}\bf{B}_{11}\\
@@ -99,7 +122,8 @@ Thus in order to implement it, I have defined $\bf{C}_\t{temp}$ as
 $$\bf{C}_\t{temp} = \begin{bmatrix}
 \mathbf{A}_{00}\mathbf{B}_{00} & \mathbf{A}_{00}\mathbf{B}_{01} & \mathbf{A}_{10}\mathbf{B}_{00} & \mathbf{A}_{10}\mathbf{B}_{01} & \mathbf{A}_{01}\mathbf{B}_{10} & \mathbf{A}_{01}\mathbf{B}_{11} & \mathbf{A}_{11}\mathbf{B}_{10} & \mathbf{A}_{11}\mathbf{B}_{11}
 \end{bmatrix}$$
-Thus the pseudo-algorithm for this would be
+#### Fully parallelised architecture
+One implementation of calculating $\bf{C}_\t{temp}$ can be
 ```pseudo
 parallel{
 	compute C_temp[0]
@@ -120,14 +144,34 @@ parallel{
 // Thus now C_temp[0] => top-left, C_temp[1] => top-right, C_temp[2] => bottom-left, C_temp[3] => bottom-right
 ```
 - Note that in order to actually get the speedup we want, the module we call for computing elements of `C_temp` (called `mmul_8` in my implementation), we will need to specify it with the `$operator` keyword so a new copy is substituted at every relevant point.
+#### Pipelined architecture
+Another implementation of finding $\bf{C}_\t{temp}$ can be
+```
+i = 0
+do-pipeline $depth 100 $fullrate{ // we want to exploit as much of the parallelism as possible 
+	compute C_temp[i]
+	i++
+}
+parallel{
+	C_temp[0] = C_temp[0] + C_temp[4]
+	C_temp[1] = C_temp[1] + C_temp[5]
+	C_temp[2] = C_temp[2] + C_temp[6]
+	C_temp[3] = C_temp[3] + C_temp[7]
+}
+// Thus now C_temp[0] => top-left, C_temp[1] => top-right, C_temp[2] => bottom-left, C_temp[3] => bottom-right
+```
+The pipelined architecture is clearly going to be slower but less expensive compared to the fully parallelised one.
 ## Part C : Summing up Rank-1 Matrices
+
 
 ## Final Comparison
 
-| Type                                            | Time taken (in ms) |
-| ----------------------------------------------- | ------------------ |
-| Native matrix multiplication                    | 1000               |
-| Partially unrolled matrix multiplication[^1]    |                    |
-| *Part A* : Fully unrolled matrix multiplication | 260                |
+| Type                                            | Time taken (in ms) | Speedup |
+| ----------------------------------------------- | ------------------ | ------- |
+| Native matrix multiplication                    | 1000               | 1       |
+| Partially unrolled matrix multiplication[^1]    | 700                |         |
+| *Part A* : Fully unrolled matrix multiplication | 260                |         |
+| *Part B* : Blocking multiplication              |                    |         |
+| *Part C* : Summation of Rank-1 matrices         |                    |         |
 
 [^1]: This version cannot be built directly. You need to comment and uncomment relevant sections of `mmul.aa` and then build using `make original`. 

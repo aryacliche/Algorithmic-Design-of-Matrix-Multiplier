@@ -1,0 +1,126 @@
+$parameter ORDER 16
+
+$storage A B C: $array[ORDER][ORDER] $of $uint<32>
+
+$module [storeA] $in (I J: $uint<8> wval: $uint<32>) $out () $is
+{
+	A[I][J] := wval
+}
+$module [storeB] $in (I J: $uint<8> wval: $uint<32>) $out () $is
+{
+	B[I][J] := wval
+}
+
+$module [loadC] $in (I J : $uint<8>) $out (Y : $uint<32>) $is
+{
+	Y := C[I][J]
+}
+
+$module [dot_product_fully_unrolled_16] $in (I J: $uint<8>) $out (result: $uint<32>) $is
+{
+	// This is tailored for ORDER = 16. There is a lot of parallelism thus.
+	$parallelblock [p1]
+	{
+		prod0 := (A[I][0] * B[0][J])
+		prod1 := (A[I][1] * B[1][J])
+		prod2 := (A[I][2] * B[2][J])
+		prod3 := (A[I][3] * B[3][J])
+		prod4 := (A[I][4] * B[4][J])
+		prod5 := (A[I][5] * B[5][J])
+		prod6 := (A[I][6] * B[6][J])
+		prod7 := (A[I][7] * B[7][J])
+		prod8 := (A[I][8] * B[8][J])
+		prod9 := (A[I][9] * B[9][J])
+		prod10 := (A[I][10] * B[10][J])
+		prod11 := (A[I][11] * B[11][J])
+		prod12 := (A[I][12] * B[12][J])
+		prod13 := (A[I][13] * B[13][J])
+		prod14 := (A[I][14] * B[14][J])
+		prod15 := (A[I][15] * B[15][J])
+	}(  prod0 => prod0
+		prod1 => prod1
+		prod2 => prod2
+		prod3 => prod3
+		prod4 => prod4
+		prod5 => prod5
+		prod6 => prod6
+		prod7 => prod7
+		prod8 => prod8
+		prod9 => prod9
+		prod10 => prod10
+		prod11 => prod11
+		prod12 => prod12
+		prod13 => prod13
+		prod14 => prod14
+		prod15 => prod15)
+	$volatile result := (
+		( ((prod1 + prod2) + (prod3 + prod4)) + ((prod5 + prod6) + (prod7 + prod8)) ) 
+		+
+		( ((prod9 + prod10) + (prod11 + prod12)) + ((prod13 + prod14) + (prod15 + prod0)) )
+		)
+}
+
+$module [dot_product_unrolled] $in (I J: $uint<8>) $out (result: $uint<32>) $is
+{
+	$branchblock[loop] {
+
+		$dopipeline $depth 31 $fullrate
+			$merge $entry $loopback
+				$phi K := $zero<8> $on $entry nK $on $loopback
+				$phi SUM0 := ($bitcast ($uint<32>) 0)  $on $entry nSUM0 $on $loopback
+				$phi SUM1 := ($bitcast ($uint<32>) 0)  $on $entry nSUM1 $on $loopback
+				$phi SUM2 := ($bitcast ($uint<32>) 0)  $on $entry nSUM2 $on $loopback
+				$phi SUM3 := ($bitcast ($uint<32>) 0)  $on $entry nSUM3 $on $loopback
+				$phi SUM4 := ($bitcast ($uint<32>) 0)  $on $entry nSUM4 $on $loopback
+				$phi SUM5 := ($bitcast ($uint<32>) 0)  $on $entry nSUM5 $on $loopback
+				$phi SUM6 := ($bitcast ($uint<32>) 0)  $on $entry nSUM6 $on $loopback
+				$phi SUM7 := ($bitcast ($uint<32>) 0)  $on $entry nSUM7 $on $loopback
+			$endmerge
+			$volatile nK := (K + 8)
+			$volatile continue_flag := (K < (ORDER-8))
+
+			nSUM0 := (SUM0 + (A[I][K]  	  * B[K][J]))
+			nSUM1 := (SUM1 + (A[I][(K+1)] * B[(K+1)][J]))
+			nSUM2 := (SUM2 + (A[I][(K+2)] * B[(K+2)][J]))
+			nSUM3 := (SUM3 + (A[I][(K+3)] * B[(K+3)][J]))
+			nSUM4 := (SUM4 + (A[I][(K+4)] * B[(K+4)][J]))
+			nSUM5 := (SUM5 + (A[I][(K+5)] * B[(K+5)][J]))
+			nSUM6 := (SUM6 + (A[I][(K+6)] * B[(K+6)][J]))
+			nSUM7 := (SUM7 + (A[I][(K+7)] * B[(K+7)][J]))
+
+		$while continue_flag
+		$volatile fSUM := (( (nSUM0 + nSUM1) + (nSUM2 + nSUM3) ) + ( (nSUM4 + nSUM5) + (nSUM6 + nSUM7) ))
+	} (fSUM => result_exported)
+	$volatile result := result_exported
+}
+
+$module [mmul] $in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$dopipeline $depth 8 
+		$fullrate 
+			$merge $entry $loopback 
+				$phi J := $zero<8> $on $entry nJ $on $loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			$volatile continue_flag := (J < (ORDER - 1))
+	
+			// Use the expensive version to speed things up even more.
+			C[I][J] := ($call dot_product_fully_unrolled_16 (I J))
+			
+		$while continue_flag
+
+	  	$if (I < (ORDER-1)) $then $place [I_loopback] $endif
+	}
+}
+
+$module [latencyTest] $in () $out () $is
+{
+	// This module is just here so that we can look at how much time it takes for a call to HW from C takes.
+	$null
+}

@@ -46,11 +46,14 @@ ghdlsim: ahir_system.vhdl ahir_system_test_bench.vhdl $(SRC)/testbench.c vhdlCSt
 clean:
 	rm -rf *.o* *.cf *.*vhdl vhdlCStubs.* *.vcd in_data* out_data* testbench_sw testbench_hw ahir_system_test_bench vhpi.log *.aa *.vc *.lso xst *.ngc *_xmsgs *.xrpt pipeHandler.log *.srp *.ghw *.dot
 
-PHONY: all clean
+PHONY: original clean
 
 # Targets with different main_file_name values
 original: main_file_name=mmul.aa
 original: HW
+
+original_unrolled: main_file_name=original_unrolled.aa
+original_unrolled: HW
 
 parta: main_file_name=parta.aa
 parta: HW
