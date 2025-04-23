@@ -1,0 +1,508 @@
+$parameter ORDER 16
+
+$storage A B: $array[ORDER][ORDER] $of $uint<32>
+$storage C_temp: $array[8][{ORDER / 2}][{ORDER / 2}] $of $uint<32> // C is a collection of 8 arrays of sizes ORDER/2 x ORDER/2
+// The way this
+
+$module [storeA] $in (I J: $uint<8> wval: $uint<32>) $out () $is
+{
+	A[I][J] := wval
+}
+$module [storeB] $in (I J: $uint<8> wval: $uint<32>) $out () $is
+{
+	B[I][J] := wval
+}
+
+$module [loadC] $in (I J : $uint<8>) $out (Y : $uint<32>) $is
+{
+	Y := ($excmux
+		 	((I < 8) & (J < 8)) 	C_temp[0][I][J]
+		 	((I < 8) & (J >= 8)) 	C_temp[1][I][(J - 8)]
+			((I >= 8) & (J < 8)) 	C_temp[2][(I - 8)][J]
+			((I >= 8) & (J >= 8)) 	C_temp[3][(I - 8)][(J - 8)]
+		)
+}
+
+$operator $module [dot_product_fully_unrolled_8] $in (I J A_row B_col A_col_B_row: $uint<8>) $out (result : $uint<32>) $is
+{
+	// This is tailored for ORDER = 8. There is a lot of parallelism thus.
+	$parallelblock [p1]
+	{
+		prod0 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 0)] * B[( (A_col_B_row << 3) + 0)][( (B_col << 3) + J)] )
+		prod1 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 1)] * B[( (A_col_B_row << 3) + 1)][( (B_col << 3) + J)] )
+		prod2 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 2)] * B[( (A_col_B_row << 3) + 2)][( (B_col << 3) + J)] )
+		prod3 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 3)] * B[( (A_col_B_row << 3) + 3)][( (B_col << 3) + J)] )
+		prod4 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 4)] * B[( (A_col_B_row << 3) + 4)][( (B_col << 3) + J)] )
+		prod5 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 5)] * B[( (A_col_B_row << 3) + 5)][( (B_col << 3) + J)] )
+		prod6 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 6)] * B[( (A_col_B_row << 3) + 6)][( (B_col << 3) + J)] )
+		prod7 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 7)] * B[( (A_col_B_row << 3) + 7)][( (B_col << 3) + J)] )
+	}(  prod0 => prod0
+		prod1 => prod1
+		prod2 => prod2
+		prod3 => prod3
+		prod4 => prod4
+		prod5 => prod5
+		prod6 => prod6
+		prod7 => prod7)
+	result := ( ((prod1 + prod2) + (prod3 + prod4)) + ((prod5 + prod6) + (prod7 + prod0)) ) 
+}
+
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+//   SUBMATRIX_NUM
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul8_0_unit ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+			$merge $entry $J_loopback 
+				$phi J := $zero<8> $on $entry nJ $on $J_loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			
+			// Use the expensive version to speed things up even more.
+			C_temp[ 0 ][I][J] := ($call dot_product_fully_unrolled_8 (I J 0 0 0 ))
+
+			$if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif	
+		}
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+//   SUBMATRIX_NUM
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul8_1_unit ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+			$merge $entry $J_loopback 
+				$phi J := $zero<8> $on $entry nJ $on $J_loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			
+			// Use the expensive version to speed things up even more.
+			C_temp[ 1 ][I][J] := ($call dot_product_fully_unrolled_8 (I J 0 0 1 ))
+
+			$if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif	
+		}
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+//   SUBMATRIX_NUM
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul8_2_unit ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+			$merge $entry $J_loopback 
+				$phi J := $zero<8> $on $entry nJ $on $J_loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			
+			// Use the expensive version to speed things up even more.
+			C_temp[ 2 ][I][J] := ($call dot_product_fully_unrolled_8 (I J 0 1 0 ))
+
+			$if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif	
+		}
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+//   SUBMATRIX_NUM
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul8_3_unit ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+			$merge $entry $J_loopback 
+				$phi J := $zero<8> $on $entry nJ $on $J_loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			
+			// Use the expensive version to speed things up even more.
+			C_temp[ 3 ][I][J] := ($call dot_product_fully_unrolled_8 (I J 0 1 1 ))
+
+			$if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif	
+		}
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+//   SUBMATRIX_NUM
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul8_4_unit ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+			$merge $entry $J_loopback 
+				$phi J := $zero<8> $on $entry nJ $on $J_loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			
+			// Use the expensive version to speed things up even more.
+			C_temp[ 4 ][I][J] := ($call dot_product_fully_unrolled_8 (I J 1 0 0 ))
+
+			$if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif	
+		}
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+//   SUBMATRIX_NUM
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul8_5_unit ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+			$merge $entry $J_loopback 
+				$phi J := $zero<8> $on $entry nJ $on $J_loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			
+			// Use the expensive version to speed things up even more.
+			C_temp[ 5 ][I][J] := ($call dot_product_fully_unrolled_8 (I J 1 0 1 ))
+
+			$if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif	
+		}
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+//   SUBMATRIX_NUM
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul8_6_unit ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+			$merge $entry $J_loopback 
+				$phi J := $zero<8> $on $entry nJ $on $J_loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			
+			// Use the expensive version to speed things up even more.
+			C_temp[ 6 ][I][J] := ($call dot_product_fully_unrolled_8 (I J 1 1 0 ))
+
+			$if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif	
+		}
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+//   SUBMATRIX_NUM
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul8_7_unit ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+			$merge $entry $J_loopback 
+				$phi J := $zero<8> $on $entry nJ $on $J_loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			
+			// Use the expensive version to speed things up even more.
+			C_temp[ 7 ][I][J] := ($call dot_product_fully_unrolled_8 (I J 1 1 1 ))
+
+			$if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif	
+		}
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+// GENERIC with MACROS
+//   SUBMATRIX_ADDER_MODULE
+// 	 index1
+// 	 index2
+
+$module [ adder_0 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$dopipeline $depth 31 
+			$merge $entry $loopback 
+				$phi J := $zero<8> $on $entry nJ $on $loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			$volatile continue_flag := (J < ((ORDER / 2) - 1))
+	
+			C_temp [ 0 ][I][J] := (C_temp[ 0 ][I][J] + C_temp[ 4 ][I][J])
+			
+		$while continue_flag
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+// GENERIC with MACROS
+//   SUBMATRIX_ADDER_MODULE
+// 	 index1
+// 	 index2
+
+$module [ adder_1 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$dopipeline $depth 31 
+			$merge $entry $loopback 
+				$phi J := $zero<8> $on $entry nJ $on $loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			$volatile continue_flag := (J < ((ORDER / 2) - 1))
+	
+			C_temp [ 1 ][I][J] := (C_temp[ 1 ][I][J] + C_temp[ 5 ][I][J])
+			
+		$while continue_flag
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+// GENERIC with MACROS
+//   SUBMATRIX_ADDER_MODULE
+// 	 index1
+// 	 index2
+
+$module [ adder_2 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$dopipeline $depth 31 
+			$merge $entry $loopback 
+				$phi J := $zero<8> $on $entry nJ $on $loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			$volatile continue_flag := (J < ((ORDER / 2) - 1))
+	
+			C_temp [ 2 ][I][J] := (C_temp[ 2 ][I][J] + C_temp[ 6 ][I][J])
+			
+		$while continue_flag
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+// GENERIC with MACROS
+//   SUBMATRIX_ADDER_MODULE
+// 	 index1
+// 	 index2
+
+$module [ adder_3 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$dopipeline $depth 31 
+			$merge $entry $loopback 
+				$phi J := $zero<8> $on $entry nJ $on $loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			$volatile continue_flag := (J < ((ORDER / 2) - 1))
+	
+			C_temp [ 3 ][I][J] := (C_temp[ 3 ][I][J] + C_temp[ 7 ][I][J])
+			
+		$while continue_flag
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+$module [mmul] $in () $out () $is
+{
+	$parallelblock[p1] 
+	{
+		$call mmul8_0_unit () ()
+		$call mmul8_1_unit () ()
+		$call mmul8_2_unit () ()
+		$call mmul8_3_unit () ()
+		$call mmul8_4_unit () ()
+		$call mmul8_5_unit () ()
+		$call mmul8_6_unit () ()
+		$call mmul8_7_unit () ()
+	}
+	$parallelblock[p2]
+	{
+		$call adder_0 () ()
+		$call adder_1 () ()
+		$call adder_2 () ()
+		$call adder_3 () ()
+	}
+}
+
+$module [latencyTest] $in () $out () $is
+{
+	// This module is just here so that we can look at how much time it takes for a call to HW from C takes.
+	$null
+}

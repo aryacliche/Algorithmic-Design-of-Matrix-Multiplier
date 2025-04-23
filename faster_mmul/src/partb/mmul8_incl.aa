@@ -1,0 +1,31 @@
+// GENERIC with MACROS
+//   MMUL_UNIT   
+//   SUBMATRIX_NUM
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ ##MMUL_UNIT ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+			$merge $entry $J_loopback 
+				$phi J := $zero<8> $on $entry nJ $on $J_loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			
+			// Use the expensive version to speed things up even more.
+			C_temp[ ##SUBMATRIX_NUM ][I][J] := ($call dot_product_fully_unrolled_8 (I J ##A_ROW ##B_COL ##A_COL_B_ROW ))
+
+			$if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif	
+		}
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}

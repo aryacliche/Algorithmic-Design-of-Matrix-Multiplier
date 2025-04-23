@@ -4,15 +4,15 @@ AHIR_LIB=$(AHIR_RELEASE)/lib
 VHDL_LIB=$(AHIR_RELEASE)/vhdl
 VHDL_VHPI_LIB=$(AHIR_RELEASE)/CtestBench/vhdl
 FUNCTIONLIB=$(AHIR_RELEASE)/functionLibrary/
-SRC=./src
+# we only need to expose some of the modules to the testbench. Others need to be visible
 TOPMODULES=-t storeA -t storeB  -t loadC  -t mmul -t latencyTest
 
 # five steps from C to vhdl simulator.
 HW: aalink aa2vc vc2vhdl vhdltb ghdlsim
 
 # Aa to vC
-aalink: $(SRC)/${main_file_name}
-	AaLinkExtMem $(SRC)/${main_file_name} | vcFormat > prog.linked.aa
+aalink: 
+	AaLinkExtMem $(SRC)/$(main_file_name) | vcFormat > prog.linked.aa
 	AaOpt -B prog.linked.aa | vcFormat > prog.linked.opt.aa
 
 aa2vc: prog.linked.opt.aa
@@ -27,12 +27,12 @@ vc2vhdl: prog.vc
 
 # build testbench and ghdl executable
 # note the use of libVhpi in building the testbench.
-vhdltb: ahir_system.vhdl ahir_system_test_bench.vhdl $(SRC)/testbench.c vhdlCStubs.h vhdlCStubs.c
-	gcc -c vhdlCStubs.c  -I$(SRC) -I./ -I$(AHIR_INCLUDE)
-	gcc -c $(SRC)/testbench.c -I$(AHIR_INCLUDE) -I$(SRC) -I./
+vhdltb: ahir_system.vhdl ahir_system_test_bench.vhdl ./src/testbench/testbench.c vhdlCStubs.h vhdlCStubs.c
+	gcc -c vhdlCStubs.c  -I$./src/ -I./ -I$(AHIR_INCLUDE)
+	gcc -c ./src/testbench/testbench.c -I$(AHIR_INCLUDE) -I$./src -I./
 	gcc -o testbench_hw testbench.o vhdlCStubs.o  -L$(AHIR_LIB) -lSocketLibPipeHandler -lpthread
 
-ghdlsim: ahir_system.vhdl ahir_system_test_bench.vhdl $(SRC)/testbench.c vhdlCStubs.h vhdlCStubs.c
+ghdlsim: ahir_system.vhdl ahir_system_test_bench.vhdl ./src/testbench/testbench.c vhdlCStubs.h vhdlCStubs.c
 	ghdl --clean
 	ghdl --remove
 	ghdl -i --work=GhdlLink  $(VHDL_LIB)/GhdlLink.vhdl
@@ -49,17 +49,28 @@ clean:
 PHONY: original clean
 
 # Targets with different main_file_name values
-original: main_file_name=mmul.aa
-original: HW
+original: 
+	$(eval main_file_name=original.aa)
+	$(eval SRC=./src/original)
+	$(MAKE) HW
 
-original_unrolled: main_file_name=original_unrolled.aa
-original_unrolled: HW
+original_unrolled: 
+	$(eval main_file_name=original_unrolled.aa)
+	$(eval SRC=./src/original)
+	$(MAKE) HW
 
-parta: main_file_name=parta.aa
-parta: HW
+parta: 
+	$(eval main_file_name=parta.aa)
+	$(eval SRC=./src/parta)
+	$(MAKE) HW
 
-partb: main_file_name=partb.aa
-partb: HW
+partb: 
+	$(eval main_file_name=master.incl.aa)
+	$(eval SRC=./src/partb)
+	AaPreprocess -I $(SRC)/ $(SRC)/master.aa -o $(SRC)/master.incl.aa
+	$(MAKE) HW
 
-partc: main_file_name=partc.aa
-partc: HW
+partc: 
+	$(eval main_file_name=partc.aa)
+	$(eval SRC=./src/partc)
+	$(MAKE) HW

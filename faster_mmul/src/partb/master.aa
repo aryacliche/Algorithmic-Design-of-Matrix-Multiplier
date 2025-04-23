@@ -1,0 +1,152 @@
+$parameter ORDER 16
+
+$storage A B: $array[ORDER][ORDER] $of $uint<32>
+$storage C_temp: $array[8][{ORDER / 2}][{ORDER / 2}] $of $uint<32> // C is a collection of 8 arrays of sizes ORDER/2 x ORDER/2
+// The way this
+
+$module [storeA] $in (I J: $uint<8> wval: $uint<32>) $out () $is
+{
+	A[I][J] := wval
+}
+$module [storeB] $in (I J: $uint<8> wval: $uint<32>) $out () $is
+{
+	B[I][J] := wval
+}
+
+$module [loadC] $in (I J : $uint<8>) $out (Y : $uint<32>) $is
+{
+	Y := ($excmux
+		 	((I < 8) & (J < 8)) 	C_temp[0][I][J]
+		 	((I < 8) & (J >= 8)) 	C_temp[1][I][(J - 8)]
+			((I >= 8) & (J < 8)) 	C_temp[2][(I - 8)][J]
+			((I >= 8) & (J >= 8)) 	C_temp[3][(I - 8)][(J - 8)]
+		)
+}
+
+$operator $module [dot_product_fully_unrolled_8] $in (I J A_row B_col A_col_B_row: $uint<8>) $out (result : $uint<32>) $is
+{
+	// This is tailored for ORDER = 8. There is a lot of parallelism thus.
+	$parallelblock [p1]
+	{
+		prod0 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 0)] * B[( (A_col_B_row << 3) + 0)][( (B_col << 3) + J)] )
+		prod1 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 1)] * B[( (A_col_B_row << 3) + 1)][( (B_col << 3) + J)] )
+		prod2 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 2)] * B[( (A_col_B_row << 3) + 2)][( (B_col << 3) + J)] )
+		prod3 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 3)] * B[( (A_col_B_row << 3) + 3)][( (B_col << 3) + J)] )
+		prod4 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 4)] * B[( (A_col_B_row << 3) + 4)][( (B_col << 3) + J)] )
+		prod5 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 5)] * B[( (A_col_B_row << 3) + 5)][( (B_col << 3) + J)] )
+		prod6 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 6)] * B[( (A_col_B_row << 3) + 6)][( (B_col << 3) + J)] )
+		prod7 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 7)] * B[( (A_col_B_row << 3) + 7)][( (B_col << 3) + J)] )
+	}(  prod0 => prod0
+		prod1 => prod1
+		prod2 => prod2
+		prod3 => prod3
+		prod4 => prod4
+		prod5 => prod5
+		prod6 => prod6
+		prod7 => prod7)
+	result := ( ((prod1 + prod2) + (prod3 + prod4)) + ((prod5 + prod6) + (prod7 + prod0)) ) 
+}
+
+#define MMUL_UNIT	  mmul8_0_unit
+#define SUBMATRIX_NUM     0
+#define A_ROW     0
+#define B_COL     0
+#define A_COL_B_ROW     0
+#include mmul8_incl.aa
+
+#define MMUL_UNIT	  mmul8_1_unit
+#define SUBMATRIX_NUM     1
+#define A_ROW     0
+#define B_COL     0
+#define A_COL_B_ROW     1
+#include mmul8_incl.aa
+
+#define MMUL_UNIT	  mmul8_2_unit
+#define SUBMATRIX_NUM     2
+#define A_ROW     0
+#define B_COL     1
+#define A_COL_B_ROW     0
+#include mmul8_incl.aa
+
+#define MMUL_UNIT	  mmul8_3_unit
+#define SUBMATRIX_NUM     3
+#define A_ROW     0
+#define B_COL     1
+#define A_COL_B_ROW     1
+#include mmul8_incl.aa
+
+#define MMUL_UNIT	  mmul8_4_unit
+#define SUBMATRIX_NUM     4
+#define A_ROW     1
+#define B_COL     0
+#define A_COL_B_ROW     0
+#include mmul8_incl.aa
+
+#define MMUL_UNIT	  mmul8_5_unit
+#define SUBMATRIX_NUM     5
+#define A_ROW     1
+#define B_COL     0
+#define A_COL_B_ROW     1
+#include mmul8_incl.aa
+
+#define MMUL_UNIT	  mmul8_6_unit
+#define SUBMATRIX_NUM     6
+#define A_ROW     1
+#define B_COL     1
+#define A_COL_B_ROW     0
+#include mmul8_incl.aa
+
+#define MMUL_UNIT	  mmul8_7_unit
+#define SUBMATRIX_NUM     7
+#define A_ROW     1
+#define B_COL     1
+#define A_COL_B_ROW     1
+#include mmul8_incl.aa
+
+#define SUBMATRIX_ADDER_MODULE	  adder_0
+#define index1     0
+#define index2     4
+#include adder_incl.aa
+
+#define SUBMATRIX_ADDER_MODULE	  adder_1
+#define index1     1
+#define index2     5
+#include adder_incl.aa
+
+#define SUBMATRIX_ADDER_MODULE	  adder_2
+#define index1     2
+#define index2     6
+#include adder_incl.aa
+
+#define SUBMATRIX_ADDER_MODULE	  adder_3
+#define index1     3
+#define index2     7
+#include adder_incl.aa
+
+$module [mmul] $in () $out () $is
+{
+	$parallelblock[p1] 
+	{
+		$call mmul8_0_unit () ()
+		$call mmul8_1_unit () ()
+		$call mmul8_2_unit () ()
+		$call mmul8_3_unit () ()
+		$call mmul8_4_unit () ()
+		$call mmul8_5_unit () ()
+		$call mmul8_6_unit () ()
+		$call mmul8_7_unit () ()
+	}
+	$parallelblock[p2]
+	{
+		$call adder_0 () ()
+		$call adder_1 () ()
+		$call adder_2 () ()
+		$call adder_3 () ()
+	}
+}
+
+$module [latencyTest] $in () $out () $is
+{
+	// This module is just here so that we can look at how much time it takes for a call to HW from C takes.
+	$null
+}

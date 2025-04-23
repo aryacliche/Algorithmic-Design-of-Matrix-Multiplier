@@ -4,7 +4,7 @@ $$\renewcommand{\bf}[1]{\mathbf{#1}}$$
 # Quickstart
 To build part `x` (`x` can be either `a`, `b` or `c`), run
 ```sh
-make partb # Note that you can replace 'partb' with any of the following {no_unrolling, partial_unrolling, parta, partb, partc}
+make partb # Note that you can replace 'partb' with any of the following {original, original_unrolled, parta, partb, partc}
 ```
 After that run `tmux new` and run the following in two different panes
 ```sh
@@ -40,7 +40,7 @@ Vendor ID:                GenuineIntel
     CPU max MHz:          4400.0000
     CPU min MHz:          400.0000
 ```
-### How to measure timing
+### Accuracy of measured timing values
 Since there might be some time spent in the function call itself, I created a module called `latencyTest` which is as follows,
 ```aa
 $module [latencyTest] $in () $out () $is // This takes no inputs, returns no outputs, does nothing.
@@ -143,24 +143,8 @@ parallel{
 }
 // Thus now C_temp[0] => top-left, C_temp[1] => top-right, C_temp[2] => bottom-left, C_temp[3] => bottom-right
 ```
-- Note that in order to actually get the speedup we want, the module we call for computing elements of `C_temp` (called `mmul_8` in my implementation), we will need to specify it with the `$operator` keyword so a new copy is substituted at every relevant point.
-#### Pipelined architecture
-Another implementation of finding $\bf{C}_\t{temp}$ can be
-```
-i = 0
-do-pipeline $depth 100 $fullrate{ // we want to exploit as much of the parallelism as possible 
-	compute C_temp[i]
-	i++
-}
-parallel{
-	C_temp[0] = C_temp[0] + C_temp[4]
-	C_temp[1] = C_temp[1] + C_temp[5]
-	C_temp[2] = C_temp[2] + C_temp[6]
-	C_temp[3] = C_temp[3] + C_temp[7]
-}
-// Thus now C_temp[0] => top-left, C_temp[1] => top-right, C_temp[2] => bottom-left, C_temp[3] => bottom-right
-```
-The pipelined architecture is clearly going to be slower but less expensive compared to the fully parallelised one.
+- There are two implementations of partb attached in this -- a failed one (aptly titled `partb_failed.aa`) and the one that works. In the latter one, in order to ensure that independent modules are created instead of having all the parallel calls waiting for the token, I had to create separate modules definitions altogether[^1].
+
 ## Part C : Summing up Rank-1 Matrices
 
 
@@ -169,9 +153,10 @@ The pipelined architecture is clearly going to be slower but less expensive comp
 | Type                                            | Time taken (in ms) | Speedup |
 | ----------------------------------------------- | ------------------ | ------- |
 | Native matrix multiplication                    | 1000               | 1       |
-| Partially unrolled matrix multiplication[^1]    | 700                |         |
+| Partially unrolled matrix multiplication        | 700                |         |
 | *Part A* : Fully unrolled matrix multiplication | 260                |         |
 | *Part B* : Blocking multiplication              |                    |         |
 | *Part C* : Summation of Rank-1 matrices         |                    |         |
 
-[^1]: This version cannot be built directly. You need to comment and uncomment relevant sections of `mmul.aa` and then build using `make original`. 
+
+[^1]: I used the sample code from the Mini-Project as inspiration for writing this code.
