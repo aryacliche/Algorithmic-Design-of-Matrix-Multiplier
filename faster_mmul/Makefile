@@ -74,3 +74,6 @@ partc:
 	$(eval main_file_name=partc.aa)
 	$(eval SRC=./src/partc)
 	$(MAKE) HW
+
+
+# Make it stop!
