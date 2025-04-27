@@ -1,4 +1,4 @@
-$$\newcommand{\bb}[1]{\mathbb{#1}}$$
+									$$\newcommand{\bb}[1]{\mathbb{#1}}$$
 $\newcommand{\t}[1]{\text{#1}}$
 $$\renewcommand{\bf}[1]{\mathbf{#1}}$$
 # Quickstart
@@ -166,12 +166,12 @@ The pipelined architecture is clearly going to be slower but less expensive comp
 
 ## Final Comparison
 
-| Type                                            | Time taken (in ms) | Speedup |
-| ----------------------------------------------- | ------------------ | ------- |
-| Native matrix multiplication                    | 1000               | 1       |
-| Partially unrolled matrix multiplication[^1]    | 700                |         |
-| *Part A* : Fully unrolled matrix multiplication | 260                |         |
-| *Part B* : Blocking multiplication              |                    |         |
-| *Part C* : Summation of Rank-1 matrices         |                    |         |
+| Type                                            | Time taken (in s) | Speedup |
+| ----------------------------------------------- | ----------------- | ------- |
+| Native matrix multiplication                    | 80                | 1       |
+| Partially unrolled matrix multiplication[^1]    | 700               |         |
+| *Part A* : Fully unrolled matrix multiplication | 24                |         |
+| *Part B* : Blocking multiplication              | 50                |         |
+| *Part C* : Summation of Rank-1 matrices         |                   |         |
 
 [^1]: This version cannot be built directly. You need to comment and uncomment relevant sections of `mmul.aa` and then build using `make original`. 

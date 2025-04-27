@@ -1,0 +1,681 @@
+$parameter ORDER 16
+$constant ZERO_8 : $uint<8> := 0
+$constant ONE_8 : $uint<8> := 1
+$constant TWO_8 : $uint<8> := 2
+$constant THREE_8 : $uint<8> := 3
+$constant FOUR_8 : $uint<8> := 4
+$constant FIVE_8 : $uint<8> := 5
+$constant SIX_8 : $uint<8> := 6
+$constant SEVEN_8 : $uint<8> := 7
+
+$storage A B: $array[ORDER][ORDER] $of $uint<32>
+$storage C_temp: $array[8][{ORDER / 2}][{ORDER / 2}] $of $uint<32> // C is a collection of 8 arrays of sizes ORDER/2 x ORDER/2
+// The way this
+
+$module [storeA] $in (I J: $uint<8> wval: $uint<32>) $out () $is
+{
+	A[I][J] := wval
+}
+$module [storeB] $in (I J: $uint<8> wval: $uint<32>) $out () $is
+{
+	B[I][J] := wval
+}
+
+$module [loadC] $in (I J : $uint<8>) $out (Y : $uint<32>) $is
+{
+	Y := ($excmux
+		 	((I < 8) & (J < 8)) 	C_temp[0][I][J]
+		 	((I < 8) & (J >= 8)) 	C_temp[1][I][(J - 8)]
+			((I >= 8) & (J < 8)) 	C_temp[2][(I - 8)][J]
+			((I >= 8) & (J >= 8)) 	C_temp[3][(I - 8)][(J - 8)]
+		)
+}
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul_8_0 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+            $merge $entry J_loopback
+                $phi J := $zero<8> $on $entry nJ $on J_loopback
+            $endmerge
+            $volatile nJ := (J + 1)
+            $volatile continue_flag := (J < ((ORDER / 2) - 1))
+
+			$volatile A_row_index := I
+            $volatile B_col_index := J
+            $volatile suffix := ZERO_8
+
+            $parallelblock [p1]
+            {
+                prod0 := ( A[A_row_index][( suffix + 0)] * B[( suffix + 0)][B_col_index] )
+                prod1 := ( A[A_row_index][( suffix + 1)] * B[( suffix + 1)][B_col_index] )
+                prod2 := ( A[A_row_index][( suffix + 2)] * B[( suffix + 2)][B_col_index] )
+                prod3 := ( A[A_row_index][( suffix + 3)] * B[( suffix + 3)][B_col_index] )
+                prod4 := ( A[A_row_index][( suffix + 4)] * B[( suffix + 4)][B_col_index] )
+                prod5 := ( A[A_row_index][( suffix + 5)] * B[( suffix + 5)][B_col_index] )
+                prod6 := ( A[A_row_index][( suffix + 6)] * B[( suffix + 6)][B_col_index] )
+                prod7 := ( A[A_row_index][( suffix + 7)] * B[( suffix + 7)][B_col_index] )
+            }(  prod0 => prod0
+                prod1 => prod1
+                prod2 => prod2
+                prod3 => prod3
+                prod4 => prod4
+                prod5 => prod5
+                prod6 => prod6
+                prod7 => prod7)
+
+            $volatile temp_index := ZERO_8
+            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+
+		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
+        }
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul_8_1 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+            $merge $entry J_loopback
+                $phi J := $zero<8> $on $entry nJ $on J_loopback
+            $endmerge
+            $volatile nJ := (J + 1)
+            $volatile continue_flag := (J < ((ORDER / 2) - 1))
+
+			$volatile A_row_index := I
+            $volatile B_col_index := (J + 8)
+            $volatile suffix := ZERO_8
+
+            $parallelblock [p1]
+            {
+                prod0 := ( A[A_row_index][( suffix + 0)] * B[( suffix + 0)][B_col_index] )
+                prod1 := ( A[A_row_index][( suffix + 1)] * B[( suffix + 1)][B_col_index] )
+                prod2 := ( A[A_row_index][( suffix + 2)] * B[( suffix + 2)][B_col_index] )
+                prod3 := ( A[A_row_index][( suffix + 3)] * B[( suffix + 3)][B_col_index] )
+                prod4 := ( A[A_row_index][( suffix + 4)] * B[( suffix + 4)][B_col_index] )
+                prod5 := ( A[A_row_index][( suffix + 5)] * B[( suffix + 5)][B_col_index] )
+                prod6 := ( A[A_row_index][( suffix + 6)] * B[( suffix + 6)][B_col_index] )
+                prod7 := ( A[A_row_index][( suffix + 7)] * B[( suffix + 7)][B_col_index] )
+            }(  prod0 => prod0
+                prod1 => prod1
+                prod2 => prod2
+                prod3 => prod3
+                prod4 => prod4
+                prod5 => prod5
+                prod6 => prod6
+                prod7 => prod7)
+
+            $volatile temp_index := ONE_8
+            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+
+		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
+        }
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul_8_2 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+            $merge $entry J_loopback
+                $phi J := $zero<8> $on $entry nJ $on J_loopback
+            $endmerge
+            $volatile nJ := (J + 1)
+            $volatile continue_flag := (J < ((ORDER / 2) - 1))
+
+			$volatile A_row_index := (I + 8)
+            $volatile B_col_index := J
+            $volatile suffix := ZERO_8
+
+            $parallelblock [p1]
+            {
+                prod0 := ( A[A_row_index][( suffix + 0)] * B[( suffix + 0)][B_col_index] )
+                prod1 := ( A[A_row_index][( suffix + 1)] * B[( suffix + 1)][B_col_index] )
+                prod2 := ( A[A_row_index][( suffix + 2)] * B[( suffix + 2)][B_col_index] )
+                prod3 := ( A[A_row_index][( suffix + 3)] * B[( suffix + 3)][B_col_index] )
+                prod4 := ( A[A_row_index][( suffix + 4)] * B[( suffix + 4)][B_col_index] )
+                prod5 := ( A[A_row_index][( suffix + 5)] * B[( suffix + 5)][B_col_index] )
+                prod6 := ( A[A_row_index][( suffix + 6)] * B[( suffix + 6)][B_col_index] )
+                prod7 := ( A[A_row_index][( suffix + 7)] * B[( suffix + 7)][B_col_index] )
+            }(  prod0 => prod0
+                prod1 => prod1
+                prod2 => prod2
+                prod3 => prod3
+                prod4 => prod4
+                prod5 => prod5
+                prod6 => prod6
+                prod7 => prod7)
+
+            $volatile temp_index := TWO_8
+            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+
+		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
+        }
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul_8_3 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+            $merge $entry J_loopback
+                $phi J := $zero<8> $on $entry nJ $on J_loopback
+            $endmerge
+            $volatile nJ := (J + 1)
+            $volatile continue_flag := (J < ((ORDER / 2) - 1))
+
+			$volatile A_row_index := (I + 8)
+            $volatile B_col_index := (J + 8)
+            $volatile suffix := ZERO_8
+
+            $parallelblock [p1]
+            {
+                prod0 := ( A[A_row_index][( suffix + 0)] * B[( suffix + 0)][B_col_index] )
+                prod1 := ( A[A_row_index][( suffix + 1)] * B[( suffix + 1)][B_col_index] )
+                prod2 := ( A[A_row_index][( suffix + 2)] * B[( suffix + 2)][B_col_index] )
+                prod3 := ( A[A_row_index][( suffix + 3)] * B[( suffix + 3)][B_col_index] )
+                prod4 := ( A[A_row_index][( suffix + 4)] * B[( suffix + 4)][B_col_index] )
+                prod5 := ( A[A_row_index][( suffix + 5)] * B[( suffix + 5)][B_col_index] )
+                prod6 := ( A[A_row_index][( suffix + 6)] * B[( suffix + 6)][B_col_index] )
+                prod7 := ( A[A_row_index][( suffix + 7)] * B[( suffix + 7)][B_col_index] )
+            }(  prod0 => prod0
+                prod1 => prod1
+                prod2 => prod2
+                prod3 => prod3
+                prod4 => prod4
+                prod5 => prod5
+                prod6 => prod6
+                prod7 => prod7)
+
+            $volatile temp_index := THREE_8
+            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+
+		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
+        }
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul_8_4 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+            $merge $entry J_loopback
+                $phi J := $zero<8> $on $entry nJ $on J_loopback
+            $endmerge
+            $volatile nJ := (J + 1)
+            $volatile continue_flag := (J < ((ORDER / 2) - 1))
+
+			$volatile A_row_index := I
+            $volatile B_col_index := J
+            $volatile suffix := ONE_8
+
+            $parallelblock [p1]
+            {
+                prod0 := ( A[A_row_index][( suffix + 0)] * B[( suffix + 0)][B_col_index] )
+                prod1 := ( A[A_row_index][( suffix + 1)] * B[( suffix + 1)][B_col_index] )
+                prod2 := ( A[A_row_index][( suffix + 2)] * B[( suffix + 2)][B_col_index] )
+                prod3 := ( A[A_row_index][( suffix + 3)] * B[( suffix + 3)][B_col_index] )
+                prod4 := ( A[A_row_index][( suffix + 4)] * B[( suffix + 4)][B_col_index] )
+                prod5 := ( A[A_row_index][( suffix + 5)] * B[( suffix + 5)][B_col_index] )
+                prod6 := ( A[A_row_index][( suffix + 6)] * B[( suffix + 6)][B_col_index] )
+                prod7 := ( A[A_row_index][( suffix + 7)] * B[( suffix + 7)][B_col_index] )
+            }(  prod0 => prod0
+                prod1 => prod1
+                prod2 => prod2
+                prod3 => prod3
+                prod4 => prod4
+                prod5 => prod5
+                prod6 => prod6
+                prod7 => prod7)
+
+            $volatile temp_index := FOUR_8
+            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+
+		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
+        }
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul_8_5 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+            $merge $entry J_loopback
+                $phi J := $zero<8> $on $entry nJ $on J_loopback
+            $endmerge
+            $volatile nJ := (J + 1)
+            $volatile continue_flag := (J < ((ORDER / 2) - 1))
+
+			$volatile A_row_index := I
+            $volatile B_col_index := (J + 8)
+            $volatile suffix := ONE_8
+
+            $parallelblock [p1]
+            {
+                prod0 := ( A[A_row_index][( suffix + 0)] * B[( suffix + 0)][B_col_index] )
+                prod1 := ( A[A_row_index][( suffix + 1)] * B[( suffix + 1)][B_col_index] )
+                prod2 := ( A[A_row_index][( suffix + 2)] * B[( suffix + 2)][B_col_index] )
+                prod3 := ( A[A_row_index][( suffix + 3)] * B[( suffix + 3)][B_col_index] )
+                prod4 := ( A[A_row_index][( suffix + 4)] * B[( suffix + 4)][B_col_index] )
+                prod5 := ( A[A_row_index][( suffix + 5)] * B[( suffix + 5)][B_col_index] )
+                prod6 := ( A[A_row_index][( suffix + 6)] * B[( suffix + 6)][B_col_index] )
+                prod7 := ( A[A_row_index][( suffix + 7)] * B[( suffix + 7)][B_col_index] )
+            }(  prod0 => prod0
+                prod1 => prod1
+                prod2 => prod2
+                prod3 => prod3
+                prod4 => prod4
+                prod5 => prod5
+                prod6 => prod6
+                prod7 => prod7)
+
+            $volatile temp_index := FIVE_8
+            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+
+		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
+        }
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul_8_6 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+            $merge $entry J_loopback
+                $phi J := $zero<8> $on $entry nJ $on J_loopback
+            $endmerge
+            $volatile nJ := (J + 1)
+            $volatile continue_flag := (J < ((ORDER / 2) - 1))
+
+			$volatile A_row_index := (I + 8)
+            $volatile B_col_index := J
+            $volatile suffix := ONE_8
+
+            $parallelblock [p1]
+            {
+                prod0 := ( A[A_row_index][( suffix + 0)] * B[( suffix + 0)][B_col_index] )
+                prod1 := ( A[A_row_index][( suffix + 1)] * B[( suffix + 1)][B_col_index] )
+                prod2 := ( A[A_row_index][( suffix + 2)] * B[( suffix + 2)][B_col_index] )
+                prod3 := ( A[A_row_index][( suffix + 3)] * B[( suffix + 3)][B_col_index] )
+                prod4 := ( A[A_row_index][( suffix + 4)] * B[( suffix + 4)][B_col_index] )
+                prod5 := ( A[A_row_index][( suffix + 5)] * B[( suffix + 5)][B_col_index] )
+                prod6 := ( A[A_row_index][( suffix + 6)] * B[( suffix + 6)][B_col_index] )
+                prod7 := ( A[A_row_index][( suffix + 7)] * B[( suffix + 7)][B_col_index] )
+            }(  prod0 => prod0
+                prod1 => prod1
+                prod2 => prod2
+                prod3 => prod3
+                prod4 => prod4
+                prod5 => prod5
+                prod6 => prod6
+                prod7 => prod7)
+
+            $volatile temp_index := SIX_8
+            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+
+		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
+        }
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+
+// GENERIC with MACROS
+//   MMUL_UNIT   
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ mmul_8_7 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$branchblock[loop2] {
+            $merge $entry J_loopback
+                $phi J := $zero<8> $on $entry nJ $on J_loopback
+            $endmerge
+            $volatile nJ := (J + 1)
+            $volatile continue_flag := (J < ((ORDER / 2) - 1))
+
+        	$volatile A_row_index := (I + 8)
+            $volatile B_col_index := (J + 8)
+            $volatile suffix := ONE_8
+
+            $parallelblock [p1]
+            {
+                prod0 := ( A[A_row_index][( suffix + 0)] * B[( suffix + 0)][B_col_index] )
+                prod1 := ( A[A_row_index][( suffix + 1)] * B[( suffix + 1)][B_col_index] )
+                prod2 := ( A[A_row_index][( suffix + 2)] * B[( suffix + 2)][B_col_index] )
+                prod3 := ( A[A_row_index][( suffix + 3)] * B[( suffix + 3)][B_col_index] )
+                prod4 := ( A[A_row_index][( suffix + 4)] * B[( suffix + 4)][B_col_index] )
+                prod5 := ( A[A_row_index][( suffix + 5)] * B[( suffix + 5)][B_col_index] )
+                prod6 := ( A[A_row_index][( suffix + 6)] * B[( suffix + 6)][B_col_index] )
+                prod7 := ( A[A_row_index][( suffix + 7)] * B[( suffix + 7)][B_col_index] )
+            }(  prod0 => prod0
+                prod1 => prod1
+                prod2 => prod2
+                prod3 => prod3
+                prod4 => prod4
+                prod5 => prod5
+                prod6 => prod6
+                prod7 => prod7)
+
+            $volatile temp_index := SEVEN_8
+            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+
+		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
+        }
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+// GENERIC with MACROS
+//   SUBMATRIX_ADDER_MODULE
+// 	 index1
+// 	 index2
+
+$module [ add_submatrices_0 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$dopipeline $depth 31 $fullrate
+			$merge $entry $loopback 
+				$phi J := $zero<8> $on $entry nJ $on $loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			$volatile continue_flag := (J < ((ORDER / 2) - 1))
+	
+			C_temp [ 0 ][I][J] := (C_temp[ 0 ][I][J] + C_temp[ 4 ][I][J])
+			
+		$while continue_flag
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+// GENERIC with MACROS
+//   SUBMATRIX_ADDER_MODULE
+// 	 index1
+// 	 index2
+
+$module [ add_submatrices_1 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$dopipeline $depth 31 $fullrate
+			$merge $entry $loopback 
+				$phi J := $zero<8> $on $entry nJ $on $loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			$volatile continue_flag := (J < ((ORDER / 2) - 1))
+	
+			C_temp [ 1 ][I][J] := (C_temp[ 1 ][I][J] + C_temp[ 5 ][I][J])
+			
+		$while continue_flag
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+// GENERIC with MACROS
+//   SUBMATRIX_ADDER_MODULE
+// 	 index1
+// 	 index2
+
+$module [ add_submatrices_2 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$dopipeline $depth 31 $fullrate
+			$merge $entry $loopback 
+				$phi J := $zero<8> $on $entry nJ $on $loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			$volatile continue_flag := (J < ((ORDER / 2) - 1))
+	
+			C_temp [ 2 ][I][J] := (C_temp[ 2 ][I][J] + C_temp[ 6 ][I][J])
+			
+		$while continue_flag
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+
+
+
+// GENERIC with MACROS
+//   SUBMATRIX_ADDER_MODULE
+// 	 index1
+// 	 index2
+
+$module [ add_submatrices_3 ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$dopipeline $depth 31 $fullrate
+			$merge $entry $loopback 
+				$phi J := $zero<8> $on $entry nJ $on $loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			$volatile continue_flag := (J < ((ORDER / 2) - 1))
+	
+			C_temp [ 3 ][I][J] := (C_temp[ 3 ][I][J] + C_temp[ 7 ][I][J])
+			
+		$while continue_flag
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
+
+$module [mmul] $in () $out () $is
+{
+	$parallelblock[p1] 
+	{
+		$call mmul_8_0 () ()
+		$call mmul_8_1 () ()
+		$call mmul_8_2 () ()
+		$call mmul_8_3 () ()
+		$call mmul_8_4 () ()
+		$call mmul_8_5 () ()
+		$call mmul_8_6 () ()
+		$call mmul_8_7 () ()
+	}
+	$parallelblock[p2]
+	{
+		$call add_submatrices_0 () ()
+		$call add_submatrices_1 () ()
+		$call add_submatrices_2 () ()
+		$call add_submatrices_3 () ()
+	}
+}
+
+$module [latencyTest] $in () $out () $is
+{
+	// This module is just here so that we can look at how much time it takes for a call to HW from C takes.
+	$null
+}
+
+$pipe COUNT_SIGNAL: $uint<32> $depth 1 $signal
+
+$module [counter_daemon]
+	$in () $out () $is
+{
+	$branchblock[loop] {
+		$dopipeline $depth 7 $fullrate
+		$merge $entry $loopback
+			$phi counter := $zero<32> $on $entry n_counter $on $loopback
+		$endmerge
+		$volatile n_counter := (counter + 1)
+		COUNT_SIGNAL := counter
+		$while 1
+	}
+}
+
+$module [readCounter] $in () $out (count_value: $uint<32>) $is
+{
+	count_value := COUNT_SIGNAL
+}

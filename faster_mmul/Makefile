@@ -5,10 +5,13 @@ VHDL_LIB=$(AHIR_RELEASE)/vhdl
 VHDL_VHPI_LIB=$(AHIR_RELEASE)/CtestBench/vhdl
 FUNCTIONLIB=$(AHIR_RELEASE)/functionLibrary/
 SRC=./src
-TOPMODULES=-t storeA -t storeB  -t loadC  -t mmul -t latencyTest
+TOPMODULES=-t storeA -t storeB  -t loadC  -t mmul -t latencyTest -t counter_daemon -t readCounter
 
 # five steps from C to vhdl simulator.
 HW: aalink aa2vc vc2vhdl vhdltb ghdlsim
+
+aapreprocess: $(SRC)/${main_file_name}
+	AaPreprocess -I $(SRC)/ $(SRC)/partb.aa -o $(SRC)/${main_file_name}
 
 # Aa to vC
 aalink: $(SRC)/${main_file_name}
@@ -49,17 +52,18 @@ clean:
 PHONY: original clean
 
 # Targets with different main_file_name values
-original: main_file_name=mmul.aa
-original: HW
+original:main_file_name=original.aa
+original:HW
 
-original_unrolled: main_file_name=original_unrolled.aa
-original_unrolled: HW
+original_unrolled:main_file_name=original_unrolled.aa
+original_unrolled:HW
 
-parta: main_file_name=parta.aa
-parta: HW
+parta:main_file_name=parta.aa
+parta:HW
 
-partb: main_file_name=partb.aa
-partb: HW
+partb:main_file_name=partb.inclu.aa
+# partb:aapreprocess
+partb:HW
 
-partc: main_file_name=partc.aa
-partc: HW
+partc:main_file_name=partc.aa
+partc:HW

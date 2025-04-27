@@ -1,0 +1,28 @@
+// GENERIC with MACROS
+//   SUBMATRIX_ADDER_MODULE
+// 	 index1
+// 	 index2
+
+$module [ ##SUBMATRIX_ADDER_MODULE ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$dopipeline $depth 31 $fullrate
+			$merge $entry $loopback 
+				$phi J := $zero<8> $on $entry nJ $on $loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+			$volatile continue_flag := (J < ((ORDER / 2) - 1))
+	
+			C_temp [ ##index1 ][I][J] := (C_temp[ ##index1 ][I][J] + C_temp[ ##index2 ][I][J])
+			
+		$while continue_flag
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}

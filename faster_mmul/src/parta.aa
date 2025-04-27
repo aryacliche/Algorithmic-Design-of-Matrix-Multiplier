@@ -124,3 +124,24 @@ $module [latencyTest] $in () $out () $is
 	// This module is just here so that we can look at how much time it takes for a call to HW from C takes.
 	$null
 }
+
+$pipe COUNT_SIGNAL: $uint<32> $depth 1 $signal
+
+$module [counter_daemon]
+	$in () $out () $is
+{
+	$branchblock[loop] {
+		$dopipeline $depth 7 $fullrate
+		$merge $entry $loopback
+			$phi counter := $zero<32> $on $entry n_counter $on $loopback
+		$endmerge
+		$volatile n_counter := (counter + 1)
+		COUNT_SIGNAL := counter
+		$while 1
+	}
+}
+
+$module [readCounter] $in () $out (count_value: $uint<32>) $is
+{
+	count_value := COUNT_SIGNAL
+}

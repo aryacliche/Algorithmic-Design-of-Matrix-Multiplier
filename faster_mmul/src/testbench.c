@@ -1,6 +1,5 @@
 #include <signal.h>
 #include <stdio.h>
-#include <time.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <pthread.h>
@@ -20,6 +19,7 @@ int main(int argc, char* argv[])
 	uint32_t A[ORDER][ORDER];
 	uint32_t B[ORDER][ORDER];
 
+	uint32_t start_load_time = readCounter();
 	for(I = 0; I < ORDER; I++)
 	{
 		for(J = 0; J < ORDER; J++)
@@ -30,28 +30,33 @@ int main(int argc, char* argv[])
 			storeB(I, J,(uint32_t)  B[I][J]);
 		}
 	}
-	fprintf(stderr,"Stored A, B\n");
+	uint32_t end_load_time = readCounter();
+	fprintf(stderr,"Stored A, B in %d cycles\n", end_load_time - start_load_time);
 	
 	fprintf(stderr,"Running latencyTest\n");
-	clock_t begin = clock();
+	
+	start_load_time = readCounter();
+    
+    latencyTest();
+	
+	end_load_time = readCounter();
+    
+    int cycles_spent = end_load_time - start_load_time;
 
-	latencyTest();
-
-	clock_t end = clock();
-	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-	fprintf(stderr,"Time spent in latencyTest: %f seconds\n", time_spent);
+	fprintf(stderr,"Time spent in latencyTest: %d cycle\n", cycles_spent);
 
 	fprintf(stderr,"Multiplying now\n");
-	begin = clock();
+	
+	start_load_time = readCounter();
 
 	mmul();
 
-	end = clock();
-	double new_time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-	fprintf(stderr,"Time spent: %f seconds\n", new_time_spent);
-	fprintf(stderr,"Time spent on mmul purely: %f seconds\n", new_time_spent - time_spent);
+	end_load_time = readCounter();
+	int new_cycles_spent = end_load_time - start_load_time;
+	fprintf(stderr,"Time spent: %d cycles\n", new_cycles_spent);
+	fprintf(stderr,"Time spent on mmul purely: %d cycles\n", new_cycles_spent - cycles_spent);
 
-	fprintf(stderr,"Finished dot_product, verifying correctness...\n");
+	fprintf(stderr,"Finished dot_product, verifying correctness...\n");			
 	for(I = 0; I < ORDER; I++)
 	{
 		for(J = 0; J < ORDER; J++)

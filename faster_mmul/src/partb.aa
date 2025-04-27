@@ -1,4 +1,12 @@
 $parameter ORDER 16
+$constant ZERO_8 : $uint<8> := 0
+$constant ONE_8 : $uint<8> := 1
+$constant TWO_8 : $uint<8> := 2
+$constant THREE_8 : $uint<8> := 3
+$constant FOUR_8 : $uint<8> := 4
+$constant FIVE_8 : $uint<8> := 5
+$constant SIX_8 : $uint<8> := 6
+$constant SEVEN_8 : $uint<8> := 7
 
 $storage A B: $array[ORDER][ORDER] $of $uint<32>
 $storage C_temp: $array[8][{ORDER / 2}][{ORDER / 2}] $of $uint<32> // C is a collection of 8 arrays of sizes ORDER/2 x ORDER/2
@@ -23,96 +31,93 @@ $module [loadC] $in (I J : $uint<8>) $out (Y : $uint<32>) $is
 		)
 }
 
-$module [dot_product_fully_unrolled_8] $in (I J A_row B_col A_col_B_row: $uint<8>) $out () $is
-{
-	// This is tailored for ORDER = 8. There is a lot of parallelism thus.
-	$parallelblock [p1]
-	{
-		prod0 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 0)] * B[( (A_col_B_row << 3) + 0)][( (B_col << 3) + J)] )
-		prod1 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 1)] * B[( (A_col_B_row << 3) + 1)][( (B_col << 3) + J)] )
-		prod2 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 2)] * B[( (A_col_B_row << 3) + 2)][( (B_col << 3) + J)] )
-		prod3 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 3)] * B[( (A_col_B_row << 3) + 3)][( (B_col << 3) + J)] )
-		prod4 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 4)] * B[( (A_col_B_row << 3) + 4)][( (B_col << 3) + J)] )
-		prod5 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 5)] * B[( (A_col_B_row << 3) + 5)][( (B_col << 3) + J)] )
-		prod6 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 6)] * B[( (A_col_B_row << 3) + 6)][( (B_col << 3) + J)] )
-		prod7 := ( A[( (A_row << 3) + I)][( (A_col_B_row << 3) + 7)] * B[( (A_col_B_row << 3) + 7)][( (B_col << 3) + J)] )
-	}(  prod0 => prod0
-		prod1 => prod1
-		prod2 => prod2
-		prod3 => prod3
-		prod4 => prod4
-		prod5 => prod5
-		prod6 => prod6
-		prod7 => prod7)
-	C_temp[( ( ( (A_col_B_row << 1) + A_row ) << 1 ) + B_col )][I][J] := ( ((prod1 + prod2) + (prod3 + prod4)) + ((prod5 + prod6) + (prod7 + prod0)) ) 
-}
+#define MMUL_UNIT	mmul_8_0
+#define A_COL_B_ROW	0
+#define A_ROW	0
+#define B_COL	0
+#include utils_mmul_partb.aa
 
-$module [mmul_8] $in (A_row B_col A_col_B_row : $uint<8>) $out () $is // A_col = B_row so we will share the variable for it
-{
-	$branchblock[loop] {
-	    $merge $entry I_loopback 
-			$phi I := $zero<8> $on $entry nI $on I_loopback
-		$endmerge
-		$volatile nI := (I + 1)
+#define MMUL_UNIT	mmul_8_1
+#define A_COL_B_ROW	0
+#define A_ROW	0
+#define B_COL	1
+#include utils_mmul_partb.aa
 
-		$branchblock[loop2] {
-			$merge $entry $J_loopback 
-				$phi J := $zero<8> $on $entry nJ $on $J_loopback
-			$endmerge
-			$volatile nJ := (J + 1)
-			
-			// Use the expensive version to speed things up even more.
-			$call dot_product_fully_unrolled_8 (I J A_row B_col A_col_B_row) ()
+#define MMUL_UNIT	mmul_8_2
+#define A_COL_B_ROW	0
+#define A_ROW	1
+#define B_COL	0
+#include utils_mmul_partb.aa
 
-			$if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif	
-		}
+#define MMUL_UNIT	mmul_8_3
+#define A_COL_B_ROW	0
+#define A_ROW	1
+#define B_COL	1
+#include utils_mmul_partb.aa
 
-	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
-	}
-}
+#define MMUL_UNIT	mmul_8_4
+#define A_COL_B_ROW	1
+#define A_ROW	0
+#define B_COL	0
+#include utils_mmul_partb.aa
 
-$module [add_submatrices] $in (index1 index2 : $uint<8>) $out () $is
-{
-	$branchblock[loop] {
-	    $merge $entry I_loopback 
-			$phi I := $zero<8> $on $entry nI $on I_loopback
-		$endmerge
-		$volatile nI := (I + 1)
+#define MMUL_UNIT	mmul_8_5
+#define A_COL_B_ROW	1
+#define A_ROW	0
+#define B_COL	1
+#include utils_mmul_partb.aa
 
-		$dopipeline $depth 3 
-			$merge $entry $loopback 
-				$phi J := $zero<8> $on $entry nJ $on $loopback
-			$endmerge
-			$volatile nJ := (J + 1)
-			$volatile continue_flag := (J < ((ORDER / 2) - 1))
-	
-			C_temp [index1][I][J] := (C_temp[index1][I][J] + C_temp[index2][I][J])
-			
-		$while continue_flag
+#define MMUL_UNIT	mmul_8_6
+#define A_COL_B_ROW	1
+#define A_ROW	1
+#define B_COL	0
+#include utils_mmul_partb.aa
 
-	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
-	}
-}
+#define MMUL_UNIT	mmul_8_7
+#define A_COL_B_ROW	1
+#define A_ROW	1
+#define B_COL	1
+#include utils_mmul_partb.aa
+
+#define SUBMATRIX_ADDER_MODULE	add_submatrices_0
+#define index1	0
+#define index2	4
+#include utils_adder_partb.aa
+
+#define SUBMATRIX_ADDER_MODULE	add_submatrices_1
+#define index1	1
+#define index2	5
+#include utils_adder_partb.aa
+
+#define SUBMATRIX_ADDER_MODULE	add_submatrices_2
+#define index1	2
+#define index2	6
+#include utils_adder_partb.aa
+
+#define SUBMATRIX_ADDER_MODULE	add_submatrices_3
+#define index1	3
+#define index2	7
+#include utils_adder_partb.aa
 
 $module [mmul] $in () $out () $is
 {
 	$parallelblock[p1] 
 	{
-		$call mmul_8 ( ($cast ($uint<8>) 0) ($cast ($uint<8>) 0) ($cast ($uint<8>) 0) ) ()
-		$call mmul_8 ( ($cast ($uint<8>) 0) ($cast ($uint<8>) 0) ($cast ($uint<8>) 1) ) ()
-		$call mmul_8 ( ($cast ($uint<8>) 0) ($cast ($uint<8>) 1) ($cast ($uint<8>) 0) ) ()
-		$call mmul_8 ( ($cast ($uint<8>) 0) ($cast ($uint<8>) 1) ($cast ($uint<8>) 1) ) ()
-		$call mmul_8 ( ($cast ($uint<8>) 1) ($cast ($uint<8>) 0) ($cast ($uint<8>) 0) ) ()
-		$call mmul_8 ( ($cast ($uint<8>) 1) ($cast ($uint<8>) 0) ($cast ($uint<8>) 1) ) ()
-		$call mmul_8 ( ($cast ($uint<8>) 1) ($cast ($uint<8>) 1) ($cast ($uint<8>) 0) ) ()
-		$call mmul_8 ( ($cast ($uint<8>) 1) ($cast ($uint<8>) 1) ($cast ($uint<8>) 1) ) ()
+		$call mmul_8_0 () ()
+		$call mmul_8_1 () ()
+		$call mmul_8_2 () ()
+		$call mmul_8_3 () ()
+		$call mmul_8_4 () ()
+		$call mmul_8_5 () ()
+		$call mmul_8_6 () ()
+		$call mmul_8_7 () ()
 	}
 	$parallelblock[p2]
 	{
-		$call add_submatrices ( ($cast ($uint<8>) 0) ($cast ($uint<8>) 4) ) ()
-		$call add_submatrices ( ($cast ($uint<8>) 1) ($cast ($uint<8>) 5) ) ()
-		$call add_submatrices ( ($cast ($uint<8>) 2) ($cast ($uint<8>) 6) ) ()
-		$call add_submatrices ( ($cast ($uint<8>) 3) ($cast ($uint<8>) 7) ) ()
+		$call add_submatrices_0 () ()
+		$call add_submatrices_1 () ()
+		$call add_submatrices_2 () ()
+		$call add_submatrices_3 () ()
 	}
 }
 
@@ -120,4 +125,25 @@ $module [latencyTest] $in () $out () $is
 {
 	// This module is just here so that we can look at how much time it takes for a call to HW from C takes.
 	$null
+}
+
+$pipe COUNT_SIGNAL: $uint<32> $depth 1 $signal
+
+$module [counter_daemon]
+	$in () $out () $is
+{
+	$branchblock[loop] {
+		$dopipeline $depth 7 $fullrate
+		$merge $entry $loopback
+			$phi counter := $zero<32> $on $entry n_counter $on $loopback
+		$endmerge
+		$volatile n_counter := (counter + 1)
+		COUNT_SIGNAL := counter
+		$while 1
+	}
+}
+
+$module [readCounter] $in () $out (count_value: $uint<32>) $is
+{
+	count_value := COUNT_SIGNAL
 }

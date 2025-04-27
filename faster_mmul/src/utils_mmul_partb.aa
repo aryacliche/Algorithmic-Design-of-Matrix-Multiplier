@@ -1,0 +1,62 @@
+// GENERIC with MACROS
+//   MMUL_UNIT   
+// 	 A_ROW
+// 	 B_COL
+//   A_COL_B_ROW
+
+$module [ ##MMUL_UNIT ] 
+$in () $out () $is
+{
+	$branchblock[loop] {
+	    $merge $entry I_loopback 
+			$phi I := $zero<8> $on $entry nI $on I_loopback
+		$endmerge
+		$volatile nI := (I + 1)
+
+		$dopipeline $depth 31 $fullrate 
+			$merge $entry $loopback 
+				$phi J := $zero<8> $on $entry nJ $on $loopback
+			$endmerge
+			$volatile nJ := (J + 1)
+            $volatile continue_flag := (J < ((ORDER / 2) - 1))
+
+			$volatile A_row_index := ($excmux (##A_ROW == 0) I (##A_ROW == 1) (I + 8))
+            $volatile B_col_index := ($excmux (##B_COL == 0) J (##B_COL == 1) (J + 8))
+            $volatile suffix := ($excmux (##A_COL_B_ROW == 0) ZERO_8 (##A_COL_B_ROW == 1) ONE_8)
+
+			$parallelblock [p1]
+            {
+                prod0 := ( A[A_row_index][( suffix + 0)] * B[( suffix + 0)][B_col_index] )
+                prod1 := ( A[A_row_index][( suffix + 1)] * B[( suffix + 1)][B_col_index] )
+                prod2 := ( A[A_row_index][( suffix + 2)] * B[( suffix + 2)][B_col_index] )
+                prod3 := ( A[A_row_index][( suffix + 3)] * B[( suffix + 3)][B_col_index] )
+                prod4 := ( A[A_row_index][( suffix + 4)] * B[( suffix + 4)][B_col_index] )
+                prod5 := ( A[A_row_index][( suffix + 5)] * B[( suffix + 5)][B_col_index] )
+                prod6 := ( A[A_row_index][( suffix + 6)] * B[( suffix + 6)][B_col_index] )
+                prod7 := ( A[A_row_index][( suffix + 7)] * B[( suffix + 7)][B_col_index] )
+            }(  prod0 => prod0
+                prod1 => prod1
+                prod2 => prod2
+                prod3 => prod3
+                prod4 => prod4
+                prod5 => prod5
+                prod6 => prod6
+                prod7 => prod7)
+
+            $volatile temp_index := ($excmux 
+                ($reduce & ( ##A_COL_B_ROW == 0 ) ( ##A_ROW == 0 ) ( ##B_COL == 0 )) ZERO_8
+                ($reduce & ( ##A_COL_B_ROW == 0 ) ( ##A_ROW == 0 ) ( ##B_COL == 1 )) ONE_8
+                ($reduce & ( ##A_COL_B_ROW == 0 ) ( ##A_ROW == 1 ) ( ##B_COL == 0 )) TWO_8
+                ($reduce & ( ##A_COL_B_ROW == 0 ) ( ##A_ROW == 1 ) ( ##B_COL == 1 )) THREE_8
+                ($reduce & ( ##A_COL_B_ROW == 1 ) ( ##A_ROW == 0 ) ( ##B_COL == 0 )) FOUR_8
+                ($reduce & ( ##A_COL_B_ROW == 1 ) ( ##A_ROW == 0 ) ( ##B_COL == 1 )) FIVE_8
+                ($reduce & ( ##A_COL_B_ROW == 1 ) ( ##A_ROW == 1 ) ( ##B_COL == 0 )) SIX_8
+                ($reduce & ( ##A_COL_B_ROW == 1 ) ( ##A_ROW == 1 ) ( ##B_COL == 1 )) SEVEN_8
+            )
+            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7)
+
+		$while continue_flag
+
+	  	$if (I < ((ORDER / 2) - 1)) $then $place [I_loopback] $endif
+	}
+}
