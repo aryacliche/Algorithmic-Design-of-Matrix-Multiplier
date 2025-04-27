@@ -9,7 +9,7 @@ $constant SIX_8 : $uint<8> := 6
 $constant SEVEN_8 : $uint<8> := 7
 
 $storage A B: $array[ORDER][ORDER] $of $uint<32>
-$storage C_temp: $array[8][{ORDER / 2}][{ORDER / 2}] $of $uint<32> // C is a collection of 8 arrays of sizes ORDER/2 x ORDER/2
+$storage C_0 C_1 C_2 C_3 C_4 C_5 C_6 C_7: $array[{ORDER / 2}][{ORDER / 2}] $of $uint<32> // C_{} is a collection of 8 arrays of sizes ORDER/2 x ORDER/2
 // The way this
 
 $module [storeA] $in (I J: $uint<8> wval: $uint<32>) $out () $is
@@ -24,10 +24,10 @@ $module [storeB] $in (I J: $uint<8> wval: $uint<32>) $out () $is
 $module [loadC] $in (I J : $uint<8>) $out (Y : $uint<32>) $is
 {
 	Y := ($excmux
-		 	((I < 8) & (J < 8)) 	C_temp[0][I][J]
-		 	((I < 8) & (J >= 8)) 	C_temp[1][I][(J - 8)]
-			((I >= 8) & (J < 8)) 	C_temp[2][(I - 8)][J]
-			((I >= 8) & (J >= 8)) 	C_temp[3][(I - 8)][(J - 8)]
+		 	((I < 8) & (J < 8)) 	C_0[I][J]
+		 	((I < 8) & (J >= 8)) 	C_1[I][(J - 8)]
+			((I >= 8) & (J < 8)) 	C_2[(I - 8)][J]
+			((I >= 8) & (J >= 8)) 	C_3[(I - 8)][(J - 8)]
 		)
 }
 
@@ -80,8 +80,7 @@ $in () $out () $is
                 prod6 => prod6
                 prod7 => prod7)
 
-            $volatile temp_index := ZERO_8
-            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+            C_0[I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
 
 		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
         }
@@ -139,8 +138,7 @@ $in () $out () $is
                 prod6 => prod6
                 prod7 => prod7)
 
-            $volatile temp_index := ONE_8
-            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+            C_1[I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
 
 		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
         }
@@ -198,8 +196,7 @@ $in () $out () $is
                 prod6 => prod6
                 prod7 => prod7)
 
-            $volatile temp_index := TWO_8
-            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+            C_2[I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
 
 		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
         }
@@ -257,8 +254,7 @@ $in () $out () $is
                 prod6 => prod6
                 prod7 => prod7)
 
-            $volatile temp_index := THREE_8
-            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+            C_3[I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
 
 		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
         }
@@ -316,8 +312,7 @@ $in () $out () $is
                 prod6 => prod6
                 prod7 => prod7)
 
-            $volatile temp_index := FOUR_8
-            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+            C_4[I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
 
 		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
         }
@@ -375,8 +370,7 @@ $in () $out () $is
                 prod6 => prod6
                 prod7 => prod7)
 
-            $volatile temp_index := FIVE_8
-            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+            C_5[I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
 
 		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
         }
@@ -434,8 +428,7 @@ $in () $out () $is
                 prod6 => prod6
                 prod7 => prod7)
 
-            $volatile temp_index := SIX_8
-            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+            C_6[I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
 
 		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
         }
@@ -493,8 +486,7 @@ $in () $out () $is
                 prod6 => prod6
                 prod7 => prod7)
 
-            $volatile temp_index := SEVEN_8
-            C_temp[temp_index][I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
+            C_7[I][J] := ($reduce + prod0 prod1 prod2 prod3 prod4 prod5 prod6 prod7) 
 
 		    $if (J < ((ORDER / 2) - 1)) $then $place [J_loopback] $endif
         }
@@ -527,7 +519,7 @@ $in () $out () $is
 			$volatile nJ := (J + 1)
 			$volatile continue_flag := (J < ((ORDER / 2) - 1))
 	
-			C_temp [ 0 ][I][J] := (C_temp[ 0 ][I][J] + C_temp[ 4 ][I][J])
+			C_0[I][J] := (C_0[I][J] + C_4[I][J])
 			
 		$while continue_flag
 
@@ -559,7 +551,7 @@ $in () $out () $is
 			$volatile nJ := (J + 1)
 			$volatile continue_flag := (J < ((ORDER / 2) - 1))
 	
-			C_temp [ 1 ][I][J] := (C_temp[ 1 ][I][J] + C_temp[ 5 ][I][J])
+			C_1[I][J] := (C_1[I][J] + C_5[I][J])
 			
 		$while continue_flag
 
@@ -591,7 +583,7 @@ $in () $out () $is
 			$volatile nJ := (J + 1)
 			$volatile continue_flag := (J < ((ORDER / 2) - 1))
 	
-			C_temp [ 2 ][I][J] := (C_temp[ 2 ][I][J] + C_temp[ 6 ][I][J])
+			C_2[I][J] := (C_2[I][J] + C_6[I][J])
 			
 		$while continue_flag
 
@@ -623,7 +615,7 @@ $in () $out () $is
 			$volatile nJ := (J + 1)
 			$volatile continue_flag := (J < ((ORDER / 2) - 1))
 	
-			C_temp [ 3 ][I][J] := (C_temp[ 3 ][I][J] + C_temp[ 7 ][I][J])
+			C_3[I][J] := (C_3[I][J] + C_7[I][J])
 			
 		$while continue_flag
 

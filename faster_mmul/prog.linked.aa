@@ -4,7 +4,21 @@ $storage  B : $array[16][16] $of $uint<32> // memory space index = 1  base addre
 // can point into  foreign( $void )
 $pipe  COUNT_SIGNAL : $uint<32>  $depth 1  $signal 
 // can point into 
-$storage  C_temp : $array[8][8][8] $of $uint<32> // memory space index = 2  base address = 0  word size = 32
+$storage  C_0 : $array[8][8] $of $uint<32> // memory space index = 2  base address = 0  word size = 32
+// can point into  foreign( $void )
+$storage  C_1 : $array[8][8] $of $uint<32> // memory space index = 3  base address = 0  word size = 32
+// can point into  foreign( $void )
+$storage  C_2 : $array[8][8] $of $uint<32> // memory space index = 4  base address = 0  word size = 32
+// can point into  foreign( $void )
+$storage  C_3 : $array[8][8] $of $uint<32> // memory space index = 5  base address = 0  word size = 32
+// can point into  foreign( $void )
+$storage  C_4 : $array[8][8] $of $uint<32> // memory space index = 6  base address = 0  word size = 32
+// can point into  foreign( $void )
+$storage  C_5 : $array[8][8] $of $uint<32> // memory space index = 7  base address = 0  word size = 32
+// can point into  foreign( $void )
+$storage  C_6 : $array[8][8] $of $uint<32> // memory space index = 8  base address = 0  word size = 32
+// can point into  foreign( $void )
+$storage  C_7 : $array[8][8] $of $uint<32> // memory space index = 9  base address = 0  word size = 32
 // can point into  foreign( $void )
 $constant  FIVE_8 : $uint<8>:= 5  
 $constant  FOUR_8 : $uint<8>:= 4  
@@ -34,7 +48,7 @@ $is
     $endmerge
     $volatile nJ := (J + 1 ) $buffering 1
     $volatile continue_flag := (J < ((16 / 2 ) - 1 )) $buffering 1
-    C_temp[0 ][I][J] := (C_temp[0 ][I][J] + C_temp[4 ][I][J]) $buffering 1// bits of buffering = 32. 
+    C_0[I][J] := (C_0[I][J] + C_4[I][J]) $buffering 1// bits of buffering = 32. 
     $while continue_flag
     $if (I < ((16 / 2 ) - 1 )) $then 
     $place[I_loopback]
@@ -61,7 +75,7 @@ $is
     $endmerge
     $volatile nJ := (J + 1 ) $buffering 1
     $volatile continue_flag := (J < ((16 / 2 ) - 1 )) $buffering 1
-    C_temp[1 ][I][J] := (C_temp[1 ][I][J] + C_temp[5 ][I][J]) $buffering 1// bits of buffering = 32. 
+    C_1[I][J] := (C_1[I][J] + C_5[I][J]) $buffering 1// bits of buffering = 32. 
     $while continue_flag
     $if (I < ((16 / 2 ) - 1 )) $then 
     $place[I_loopback]
@@ -88,7 +102,7 @@ $is
     $endmerge
     $volatile nJ := (J + 1 ) $buffering 1
     $volatile continue_flag := (J < ((16 / 2 ) - 1 )) $buffering 1
-    C_temp[2 ][I][J] := (C_temp[2 ][I][J] + C_temp[6 ][I][J]) $buffering 1// bits of buffering = 32. 
+    C_2[I][J] := (C_2[I][J] + C_6[I][J]) $buffering 1// bits of buffering = 32. 
     $while continue_flag
     $if (I < ((16 / 2 ) - 1 )) $then 
     $place[I_loopback]
@@ -115,7 +129,7 @@ $is
     $endmerge
     $volatile nJ := (J + 1 ) $buffering 1
     $volatile continue_flag := (J < ((16 / 2 ) - 1 )) $buffering 1
-    C_temp[3 ][I][J] := (C_temp[3 ][I][J] + C_temp[7 ][I][J]) $buffering 1// bits of buffering = 32. 
+    C_3[I][J] := (C_3[I][J] + C_7[I][J]) $buffering 1// bits of buffering = 32. 
     $while continue_flag
     $if (I < ((16 / 2 ) - 1 )) $then 
     $place[I_loopback]
@@ -159,7 +173,7 @@ $in ( I : $uint<8>   J : $uint<8>  )
 $out ( Y : $uint<32>  )
 $is
 {
-  Y := ((( $mux ((I < 8 ) & (J < 8 )) C_temp[0 ][I][J]  _b0  )  | ( $mux ((I < 8 ) & (J >= 8 )) C_temp[1 ][I][(J - 8 )]  _b0  ) ) | (( $mux ((I >= 8 ) & (J < 8 )) C_temp[2 ][(I - 8 )][J]  _b0  )  | ( $mux ((I >= 8 ) & (J >= 8 )) C_temp[3 ][(I - 8 )][(J - 8 )]  _b0  ) )) $buffering 1// bits of buffering = 32. 
+  Y := ((( $mux ((I < 8 ) & (J < 8 )) C_0[I][J]  _b0  )  | ( $mux ((I < 8 ) & (J >= 8 )) C_1[I][(J - 8 )]  _b0  ) ) | (( $mux ((I >= 8 ) & (J < 8 )) C_2[(I - 8 )][J]  _b0  )  | ( $mux ((I >= 8 ) & (J >= 8 )) C_3[(I - 8 )][(J - 8 )]  _b0  ) )) $buffering 1// bits of buffering = 32. 
 }
 $module [mmul_8_0]
 $in ()
@@ -196,8 +210,7 @@ $is
         prod7 := (A[A_row_index][(suffix + 7 )] * B[(suffix + 7 )][B_col_index]) $buffering 1// bits of buffering = 32. 
       }
       ( prod0 => prod0  prod1 => prod1  prod2 => prod2  prod3 => prod3  prod4 => prod4  prod5 => prod5  prod6 => prod6  prod7 => prod7 )
-      $volatile temp_index := ZERO_8 $buffering 1
-      C_temp[temp_index][I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
+      C_0[I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
       $if (J < ((16 / 2 ) - 1 )) $then 
       $place[J_loopback]
       $endif
@@ -242,8 +255,7 @@ $is
         prod7 := (A[A_row_index][(suffix + 7 )] * B[(suffix + 7 )][B_col_index]) $buffering 1// bits of buffering = 32. 
       }
       ( prod0 => prod0  prod1 => prod1  prod2 => prod2  prod3 => prod3  prod4 => prod4  prod5 => prod5  prod6 => prod6  prod7 => prod7 )
-      $volatile temp_index := ONE_8 $buffering 1
-      C_temp[temp_index][I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
+      C_1[I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
       $if (J < ((16 / 2 ) - 1 )) $then 
       $place[J_loopback]
       $endif
@@ -288,8 +300,7 @@ $is
         prod7 := (A[A_row_index][(suffix + 7 )] * B[(suffix + 7 )][B_col_index]) $buffering 1// bits of buffering = 32. 
       }
       ( prod0 => prod0  prod1 => prod1  prod2 => prod2  prod3 => prod3  prod4 => prod4  prod5 => prod5  prod6 => prod6  prod7 => prod7 )
-      $volatile temp_index := TWO_8 $buffering 1
-      C_temp[temp_index][I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
+      C_2[I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
       $if (J < ((16 / 2 ) - 1 )) $then 
       $place[J_loopback]
       $endif
@@ -334,8 +345,7 @@ $is
         prod7 := (A[A_row_index][(suffix + 7 )] * B[(suffix + 7 )][B_col_index]) $buffering 1// bits of buffering = 32. 
       }
       ( prod0 => prod0  prod1 => prod1  prod2 => prod2  prod3 => prod3  prod4 => prod4  prod5 => prod5  prod6 => prod6  prod7 => prod7 )
-      $volatile temp_index := THREE_8 $buffering 1
-      C_temp[temp_index][I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
+      C_3[I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
       $if (J < ((16 / 2 ) - 1 )) $then 
       $place[J_loopback]
       $endif
@@ -380,8 +390,7 @@ $is
         prod7 := (A[A_row_index][(suffix + 7 )] * B[(suffix + 7 )][B_col_index]) $buffering 1// bits of buffering = 32. 
       }
       ( prod0 => prod0  prod1 => prod1  prod2 => prod2  prod3 => prod3  prod4 => prod4  prod5 => prod5  prod6 => prod6  prod7 => prod7 )
-      $volatile temp_index := FOUR_8 $buffering 1
-      C_temp[temp_index][I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
+      C_4[I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
       $if (J < ((16 / 2 ) - 1 )) $then 
       $place[J_loopback]
       $endif
@@ -426,8 +435,7 @@ $is
         prod7 := (A[A_row_index][(suffix + 7 )] * B[(suffix + 7 )][B_col_index]) $buffering 1// bits of buffering = 32. 
       }
       ( prod0 => prod0  prod1 => prod1  prod2 => prod2  prod3 => prod3  prod4 => prod4  prod5 => prod5  prod6 => prod6  prod7 => prod7 )
-      $volatile temp_index := FIVE_8 $buffering 1
-      C_temp[temp_index][I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
+      C_5[I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
       $if (J < ((16 / 2 ) - 1 )) $then 
       $place[J_loopback]
       $endif
@@ -472,8 +480,7 @@ $is
         prod7 := (A[A_row_index][(suffix + 7 )] * B[(suffix + 7 )][B_col_index]) $buffering 1// bits of buffering = 32. 
       }
       ( prod0 => prod0  prod1 => prod1  prod2 => prod2  prod3 => prod3  prod4 => prod4  prod5 => prod5  prod6 => prod6  prod7 => prod7 )
-      $volatile temp_index := SIX_8 $buffering 1
-      C_temp[temp_index][I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
+      C_6[I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
       $if (J < ((16 / 2 ) - 1 )) $then 
       $place[J_loopback]
       $endif
@@ -518,8 +525,7 @@ $is
         prod7 := (A[A_row_index][(suffix + 7 )] * B[(suffix + 7 )][B_col_index]) $buffering 1// bits of buffering = 32. 
       }
       ( prod0 => prod0  prod1 => prod1  prod2 => prod2  prod3 => prod3  prod4 => prod4  prod5 => prod5  prod6 => prod6  prod7 => prod7 )
-      $volatile temp_index := SEVEN_8 $buffering 1
-      C_temp[temp_index][I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
+      C_7[I][J] := (((prod0 + prod1) + (prod2 + prod3)) + ((prod4 + prod5) + (prod6 + prod7))) $buffering 1// bits of buffering = 32. 
       $if (J < ((16 / 2 ) - 1 )) $then 
       $place[J_loopback]
       $endif
@@ -576,5 +582,12 @@ $is
 }
 // Memory space 0: A 
 // Memory space 1: B 
-// Memory space 2: C_temp 
+// Memory space 2: C_0 
+// Memory space 3: C_1 
+// Memory space 4: C_2 
+// Memory space 5: C_3 
+// Memory space 6: C_4 
+// Memory space 7: C_5 
+// Memory space 8: C_6 
+// Memory space 9: C_7 
 // use of gated clocks in modules 

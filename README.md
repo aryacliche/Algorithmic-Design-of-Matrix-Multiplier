@@ -169,9 +169,9 @@ The pipelined architecture is clearly going to be slower but less expensive comp
 | Type                                            | Time taken (in s) | Speedup |
 | ----------------------------------------------- | ----------------- | ------- |
 | Native matrix multiplication                    | 80                | 1       |
-| Partially unrolled matrix multiplication[^1]    | 700               |         |
-| *Part A* : Fully unrolled matrix multiplication | 24                |         |
-| *Part B* : Blocking multiplication              | 50                |         |
+| Partially unrolled matrix multiplication[^1]    | 54                |         |
+| *Part A* : Fully unrolled matrix multiplication | 21                |         |
+| *Part B* : Blocking multiplication              | 42                |         |
 | *Part C* : Summation of Rank-1 matrices         |                   |         |
 
 [^1]: This version cannot be built directly. You need to comment and uncomment relevant sections of `mmul.aa` and then build using `make original`. 

@@ -9,7 +9,7 @@ $constant SIX_8 : $uint<8> := 6
 $constant SEVEN_8 : $uint<8> := 7
 
 $storage A B: $array[ORDER][ORDER] $of $uint<32>
-$storage C_temp: $array[8][{ORDER / 2}][{ORDER / 2}] $of $uint<32> // C is a collection of 8 arrays of sizes ORDER/2 x ORDER/2
+$storage C_0, C_1, C_2, C_3, C_4, C_5, C_6, C_7: $array[{ORDER / 2}][{ORDER / 2}] $of $uint<32> // C_{} is a collection of 8 arrays of sizes ORDER/2 x ORDER/2
 // The way this
 
 $module [storeA] $in (I J: $uint<8> wval: $uint<32>) $out () $is
@@ -24,10 +24,10 @@ $module [storeB] $in (I J: $uint<8> wval: $uint<32>) $out () $is
 $module [loadC] $in (I J : $uint<8>) $out (Y : $uint<32>) $is
 {
 	Y := ($excmux
-		 	((I < 8) & (J < 8)) 	C_temp[0][I][J]
-		 	((I < 8) & (J >= 8)) 	C_temp[1][I][(J - 8)]
-			((I >= 8) & (J < 8)) 	C_temp[2][(I - 8)][J]
-			((I >= 8) & (J >= 8)) 	C_temp[3][(I - 8)][(J - 8)]
+		 	((I < 8) & (J < 8)) 	C_0[I][J]
+		 	((I < 8) & (J >= 8)) 	C_1[I][(J - 8)]
+			((I >= 8) & (J < 8)) 	C_2[(I - 8)][J]
+			((I >= 8) & (J >= 8)) 	C_3[(I - 8)][(J - 8)]
 		)
 }
 
