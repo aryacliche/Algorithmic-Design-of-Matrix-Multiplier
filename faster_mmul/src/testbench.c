@@ -19,8 +19,11 @@ int main(int argc, char* argv[])
 	uint32_t A[ORDER][ORDER];
 	uint32_t B[ORDER][ORDER];
 
-	uint32_t start_load_time = readCounter();
-	for(I = 0; I < ORDER; I++)
+	struct timespec start, end;
+    
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    
+    for(I = 0; I < ORDER; I++)
 	{
 		for(J = 0; J < ORDER; J++)
 		{
@@ -30,31 +33,37 @@ int main(int argc, char* argv[])
 			storeB(I, J,(uint32_t)  B[I][J]);
 		}
 	}
-	uint32_t end_load_time = readCounter();
-	fprintf(stderr,"Stored A, B in %d cycles\n", end_load_time - start_load_time);
+    clock_gettime(CLOCK_MONOTONIC, &end);
+	// Calculate elapsed time in seconds
+    double elapsed = (end.tv_sec - start.tv_sec);
+    elapsed += (end.tv_nsec - start.tv_nsec) / 1e9;
+	fprintf(stderr,"Stored A, B in %f s\n", elapsed);
 	
 	fprintf(stderr,"Running latencyTest\n");
 	
-	start_load_time = readCounter();
+	clock_gettime(CLOCK_MONOTONIC, &start);
     
     latencyTest();
 	
-	end_load_time = readCounter();
+	clock_gettime(CLOCK_MONOTONIC, &end);
     
-    int cycles_spent = end_load_time - start_load_time;
+    // Calculate elapsed time in seconds
+    double time_elapsed = (end.tv_sec - start.tv_sec);
+    time_elapsed += (end.tv_nsec - start.tv_nsec) / 1e9;
 
-	fprintf(stderr,"Time spent in latencyTest: %d cycle\n", cycles_spent);
+	fprintf(stderr,"Time spent in latencyTest: %f s\n", time_elapsed);
 
 	fprintf(stderr,"Multiplying now\n");
 	
-	start_load_time = readCounter();
+	clock_gettime(CLOCK_MONOTONIC, &start);
 
 	mmul();
 
-	end_load_time = readCounter();
-	int new_cycles_spent = end_load_time - start_load_time;
-	fprintf(stderr,"Time spent: %d cycles\n", new_cycles_spent);
-	fprintf(stderr,"Time spent on mmul purely: %d cycles\n", new_cycles_spent - cycles_spent);
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	double new_elapsed = (end.tv_sec - start.tv_sec);
+    new_elapsed += (end.tv_nsec - start.tv_nsec) / 1e9;
+	fprintf(stderr,"Time spent: %f s\n", new_elapsed);
+	fprintf(stderr,"Time spent on mmul purely: %f s\n", new_elapsed - time_elapsed);
 
 	fprintf(stderr,"Finished dot_product, verifying correctness...\n");			
 	for(I = 0; I < ORDER; I++)
