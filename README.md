@@ -1,4 +1,4 @@
-									$$\newcommand{\bb}[1]{\mathbb{#1}}$$
+$$\newcommand{\bb}[1]{\mathbb{#1}}$$
 $\newcommand{\t}[1]{\text{#1}}$
 $$\renewcommand{\bf}[1]{\mathbf{#1}}$$
 # Quickstart
@@ -48,11 +48,12 @@ $module [latencyTest] $in () $out () $is // This takes no inputs, returns no out
 	$null
 }
 ```
-- Using the `clock()` function in C, I was able to time all of the function calls. 
-- Generally `latencyTest` took $\approx 3\t{ ms}$.
+- Using the `clock()` function in C will be wrong since it doesn't measure wall-clock time -- rather it looks at the time on the processor.
+- Thus I used `clock_gettime()` which promises to be more faithful to the wall-clock time.
+- Generally `latencyTest` took $\approx 30\t{ ms}$.
 - All timing values reported hereafter are after subtracting time taken by `latencyTest`.
 
-**The native (without unrolling) dot product took $\approx 1000\t{ ms}$.**
+**The native (without unrolling) dot product took $\approx 80\t{ s}$.**
 ## Part A : Using a better dot product
 The simple matrix multiplication method uses a dot product module that performs 16 iterations in order to calculate one sum. We can better it by "unfolding" all 16 iterations in parallel.
 - I considered using fork-join structures to implement the final addition of all the individual products but that would instantiate registers for each of the partial sums which I assumed would ultimately slow it all down.
@@ -160,18 +161,18 @@ parallel{
 }
 // Thus now C_temp[0] => top-left, C_temp[1] => top-right, C_temp[2] => bottom-left, C_temp[3] => bottom-right
 ```
-The pipelined architecture is clearly going to be slower but less expensive compared to the fully parallelised one.
+The pipelined architecture is clearly going to be slower but less expensive compared to the fully parallelised one. *In the end, I deleted the pipelined version in favour of using the non-pipelined one.*
 ## Part C : Summing up Rank-1 Matrices
-
+									Similar to Part B this can be achieved by using multiple modules in parallel.
 
 ## Final Comparison
 
 | Type                                            | Time taken (in s) | Speedup |
 | ----------------------------------------------- | ----------------- | ------- |
 | Native matrix multiplication                    | 80                | 1       |
-| Partially unrolled matrix multiplication[^1]    | 54                |         |
-| *Part A* : Fully unrolled matrix multiplication | 21                |         |
-| *Part B* : Blocking multiplication              | 42                |         |
-| *Part C* : Summation of Rank-1 matrices         |                   |         |
+| Partially unrolled matrix multiplication[^1]    | 54                | 1.48    |
+| *Part A* : Fully unrolled matrix multiplication | 21                | 3.80    |
+| *Part B* : Blocking multiplication              | 42                | 1.90    |
+| *Part C* : Summation of Rank-1 matrices         | -                 | -       |
 
 [^1]: This version cannot be built directly. You need to comment and uncomment relevant sections of `mmul.aa` and then build using `make original`. 
